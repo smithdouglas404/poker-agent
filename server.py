@@ -300,19 +300,45 @@ async def proof(session_id: str):
 # ── GET /health ───────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
-    mem0_ok = claude_ok = False
+    # Show first 8 chars of each key so you can verify they loaded
+    mem0_preview    = MEM0_API_KEY[:8]   + "…" if MEM0_API_KEY    else "NOT SET"
+    claude_preview  = ANTHROPIC_KEY[:8]  + "…" if ANTHROPIC_KEY   else "NOT SET"
+    mem0_ok         = bool(MEM0_API_KEY)
+    claude_ok       = bool(ANTHROPIC_KEY)
+
+    # Try actually calling Mem0
+    mem0_live = False
+    mem0_error = ""
     try:
-        get_mem0()
-        mem0_ok = bool(MEM0_API_KEY)
-    except: pass
+        m = get_mem0()
+        m.get_all(user_id=USER_ID)
+        mem0_live = True
+    except Exception as e:
+        mem0_error = str(e)[:100]
+
+    # Try actually calling Claude
+    claude_live = False
+    claude_error = ""
     try:
-        claude_ok = bool(ANTHROPIC_KEY)
-    except: pass
+        c = get_claude()
+        c.messages.create(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=10,
+            messages=[{"role":"user","content":"hi"}]
+        )
+        claude_live = True
+    except Exception as e:
+        claude_error = str(e)[:100]
+
     return {
-        "ok":    True,
-        "mem0":  mem0_ok,
-        "claude": claude_ok,
-        "db":    DB_PATH
+        "ok":           True,
+        "mem0_key":     mem0_preview,
+        "claude_key":   claude_preview,
+        "mem0_live":    mem0_live,
+        "claude_live":  claude_live,
+        "mem0_error":   mem0_error,
+        "claude_error": claude_error,
+        "db":           DB_PATH
     }
 
 if __name__ == "__main__":
