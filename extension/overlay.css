@@ -1,0 +1,79 @@
+/* PokerNow Advisor v2 */
+#pn-advisor{position:fixed;top:20px;right:20px;width:255px;background:rgba(10,10,20,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:12px;color:#e0e0f0;z-index:999999;box-shadow:0 8px 40px rgba(0,0,0,0.7)}
+#pna-header{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;background:rgba(255,255,255,0.05);border-radius:12px 12px 0 0;cursor:move;border-bottom:1px solid rgba(255,255,255,0.07)}
+#pna-title{font-size:13px;font-weight:700;color:#a78bfa;letter-spacing:.04em}
+#pna-hcontrols{display:flex;gap:3px}
+#pna-hcontrols button{background:rgba(255,255,255,0.07);border:none;color:#888;width:22px;height:22px;border-radius:5px;font-size:11px;cursor:pointer;transition:background .1s;padding:0}
+#pna-hcontrols button:hover{background:rgba(255,255,255,0.18);color:#fff}
+#pna-body{padding:10px 11px 11px}
+
+/* Upload */
+#pna-upload{text-align:center;padding:6px 0}
+#pna-upload-msg{font-size:11px;color:#666;margin-bottom:7px}
+#pna-lbl{display:inline-block;padding:5px 13px;background:#4f46e5;color:#fff;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;transition:background .15s}
+#pna-lbl:hover{background:#6366f1}
+#pna-ustat{margin-top:5px;font-size:11px;color:#6ee7b7}
+
+/* Detected cards */
+#pna-detected{padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:7px;margin-bottom:7px;border:1px solid rgba(255,255,255,0.07)}
+#pna-hole-row,#pna-board-row{line-height:1.9}
+#pna-board-row{margin-top:1px}
+.pna-dim{color:#555;font-size:10px}
+.pna-c{display:inline-block;padding:1px 5px;border-radius:4px;font-size:13px;font-weight:700;margin:1px}
+.pna-c-hole{background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.25)}
+.pna-c-board{background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.22)}
+
+/* Action box */
+#pna-action-box{margin-bottom:8px}
+.pna-action{font-size:19px;font-weight:800;padding:8px 10px;border-radius:9px;text-align:center;letter-spacing:.03em;margin-bottom:4px}
+.pna-action-raise{background:rgba(139,92,246,0.2);color:#c4b5fd;border:1px solid rgba(139,92,246,0.4)}
+.pna-action-bet{background:rgba(34,197,94,0.18);color:#4ade80;border:1px solid rgba(34,197,94,0.35)}
+.pna-action-call{background:rgba(234,179,8,0.15);color:#fbbf24;border:1px solid rgba(234,179,8,0.3)}
+.pna-action-check{background:rgba(148,163,184,0.1);color:#94a3b8;border:1px solid rgba(148,163,184,0.2)}
+.pna-action-fold{background:rgba(239,68,68,0.18);color:#f87171;border:1px solid rgba(239,68,68,0.3)}
+.pna-sizing{font-size:12px;font-weight:600;text-align:center;padding:3px 8px;border-radius:6px}
+.pna-sizing-raise{color:#c4b5fd;background:rgba(139,92,246,0.1)}
+.pna-sizing-bet{color:#4ade80;background:rgba(34,197,94,0.08)}
+.pna-sizing-call{color:#fbbf24;background:rgba(234,179,8,0.08)}
+
+/* Coming cards */
+#pna-coming-wrap{margin-bottom:7px}
+#pna-clabel{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+#pna-coming{display:flex;flex-wrap:wrap;gap:3px}
+.pna-nc{padding:2px 6px;border-radius:4px;font-size:12px;font-weight:600;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09)}
+.pna-nc-hit{background:rgba(167,139,250,0.18);border-color:rgba(167,139,250,0.45);color:#c4b5fd!important}
+
+/* Reasons */
+#pna-reasons{margin-bottom:7px}
+.pna-reason{font-size:11px;color:#7c8db5;line-height:1.5;margin-bottom:2px}
+
+/* Footer */
+#pna-foot{display:flex;gap:5px;font-size:10px;color:#444;border-top:1px solid rgba(255,255,255,0.05);padding-top:5px}
+#pna-foot span{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:4px}
+
+/* Waiting */
+#pna-waiting{text-align:center;padding:12px 0;color:#555;font-size:12px}
+
+/* Debug output */
+#pna-debug-out{font-size:9px;color:#666;margin-top:6px;padding:5px;background:rgba(255,255,255,0.03);border-radius:5px;word-break:break-all;line-height:1.4;max-height:120px;overflow-y:auto}
+#pna-wait-msg{font-size:12px;color:#666}
+
+/* Agent advice panel */
+#pna-server-dot{width:8px;height:8px;border-radius:50%;background:#555;margin:0 4px;flex-shrink:0;transition:background .5s}
+#pna-header{display:flex;align-items:center}
+#pna-title{flex:1}
+#pna-agent-wrap{background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+#pna-agent-label{font-size:10px;color:#a78bfa;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+#pna-agent-text{font-size:11px;color:#d4d4e8;line-height:1.6;white-space:pre-wrap}
+#pna-mem-badge{font-size:10px;color:#a78bfa;background:rgba(167,139,250,0.12);padding:1px 6px;border-radius:8px}
+#pna-debug-panel{padding:6px 10px;font-size:9px;color:#666;word-break:break-all;line-height:1.6;border-top:1px solid rgba(255,255,255,0.06)}
+
+/* Proof panel */
+#pna-proof-btn{font-size:10px;color:#a78bfa;cursor:pointer;text-decoration:underline;margin-top:4px;display:block;text-align:center}
+#pna-proof-panel{display:none;padding:8px 10px;border-top:1px solid rgba(255,255,255,0.07);max-height:200px;overflow-y:auto}
+#pna-proof-panel h4{font-size:10px;color:#a78bfa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.proof-entry{font-size:10px;color:#666;line-height:1.5;border-left:2px solid rgba(167,139,250,0.3);padding-left:6px;margin-bottom:6px}
+.proof-entry b{color:#888}
+.proof-mem0{border-left-color:#22c55e}
+.proof-letta{border-left-color:#a78bfa}
+.proof-empty{font-size:10px;color:#444;text-align:center;padding:8px 0}
