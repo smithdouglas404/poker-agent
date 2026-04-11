@@ -252,7 +252,7 @@ Be specific. Reference actual hand numbers and cards from the memories above."""
     try:
         claude = get_claude()
         msg = claude.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-sonnet-4-5",
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -311,7 +311,7 @@ async def health():
     mem0_error = ""
     try:
         m = get_mem0()
-        m.get_all(user_id=USER_ID)
+        m.search(query="test", user_id=USER_ID, limit=1)
         mem0_live = True
     except Exception as e:
         mem0_error = str(e)[:100]
@@ -322,7 +322,7 @@ async def health():
     try:
         c = get_claude()
         c.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-sonnet-4-5",
             max_tokens=10,
             messages=[{"role":"user","content":"hi"}]
         )
