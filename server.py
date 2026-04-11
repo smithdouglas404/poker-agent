@@ -328,7 +328,7 @@ async def health():
         )
         claude_live = True
     except Exception as e:
-        claude_error = str(e)[:100]
+        claude_error = str(e)[:500]
 
     return {
         "ok":           True,
