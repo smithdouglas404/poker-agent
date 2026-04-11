@@ -215,7 +215,7 @@ async def get_advice(req: AdviceRequest):
     try:
         mem0 = get_mem0()
         query = f"hand with {' '.join(req.hole_cards)} board {' '.join(req.board_cards)} carry patterns"
-        results = mem0.search(query=query, user_id=USER_ID, limit=6)
+        results = mem0.search(query=query, filters={"user_id": USER_ID}, limit=6)
         raw_memories = results.get("results", []) if isinstance(results, dict) else []
         memories_text = "\n".join(f"- {r['memory']}" for r in raw_memories)
     except Exception as e:
@@ -311,7 +311,7 @@ async def health():
     mem0_error = ""
     try:
         m = get_mem0()
-        m.search(query="test", user_id=USER_ID, limit=1)
+        m.search(query="test", filters={"user_id": USER_ID}, limit=1)
         mem0_live = True
     except Exception as e:
         mem0_error = str(e)[:100]
