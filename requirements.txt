@@ -1,0 +1,5 @@
+fastapi==0.110.0
+uvicorn==0.29.0
+mem0ai==0.1.16
+anthropic==0.25.0
+pydantic==2.6.4
