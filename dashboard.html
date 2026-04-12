@@ -4,664 +4,555 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Poker Advisor Pro</title>
-
 <style>
-:root {
-  --bg:        #0d1117;
-  --bg-panel:  #0d1117;
-  --bg-card:   #161b22;
-  --bg-hover:  #1c2128;
-  --bg-input:  #161b22;
-
-  --border:    #21262d;
-  --border-md: #30363d;
-  --border-hi: #484f58;
-
-  --gold:      #00d4a4;
-  --gold-dim:  rgba(0,212,164,0.10);
-  --gold-glow: rgba(0,212,164,0.25);
-
-  --green:     #00d4a4;
-  --green-dim: rgba(0,212,164,0.10);
-  --red:       #ff5555;
-  --red-dim:   rgba(255,85,85,0.12);
-  --blue:      #58a6ff;
-  --blue-dim:  rgba(88,166,255,0.12);
-  --purple:    #bc8cff;
-  --purple-dim:rgba(188,140,255,0.12);
-
-  --danger:  #ff5555;
-  --warning: #e3b341;
-  --info:    #58a6ff;
-  --accent:  #00d4a4;
-
-  --t1: #e6edf3;
-  --t2: #8b949e;
-  --t3: #484f58;
-  --t4: #30363d;
-
-  --raise: #e3b341;
-  --bet:   #58a6ff;
-  --call:  #00d4a4;
-  --check: #8b949e;
-  --fold:  #ff5555;
-
-  --f-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --f-mono:    'SF Mono', 'Fira Code', 'Consolas', monospace;
-  --f-body:    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg-panel:#0d1117;--bg-card:#161b22;--bg-hover:#1c2128;
+  --border:#21262d;--border-md:#30363d;--border-hi:#484f58;
+  --green:#00d4a4;--green-dim:rgba(0,212,164,0.10);
+  --red:#ff5555;--red-dim:rgba(255,85,85,0.12);
+  --blue:#58a6ff;--blue-dim:rgba(88,166,255,0.12);
+  --purple:#bc8cff;--purple-dim:rgba(188,140,255,0.12);
+  --gold:#00d4a4;--gold-dim:rgba(0,212,164,0.10);--gold-glow:rgba(0,212,164,0.25);
+  --danger:#ff5555;--warning:#e3b341;--info:#58a6ff;--accent:#00d4a4;
+  --t1:#e6edf3;--t2:#8b949e;--t3:#484f58;--t4:#30363d;
+  --raise:#e3b341;--bet:#58a6ff;--call:#00d4a4;--check:#8b949e;--fold:#ff5555;
+  --f-display:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --f-mono:'SF Mono','Fira Code','Consolas',monospace;
+  --f-body:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
+html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font-family:var(--f-body);font-size:12px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes snapIn{0%{transform:scale(0.92) translateY(4px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glowPulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 20px rgba(0,212,164,0.12)}}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── HEADER ── */
+#header{height:44px;background:#161b22;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;position:relative;z-index:10}
+.logo{font-size:13px;font-weight:700;color:var(--t1);display:flex;align-items:center;gap:7px}
+.logo-suit{color:var(--green)}.logo em{color:var(--green);font-style:normal}
+.live-badge{display:flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;background:rgba(0,212,164,0.1);border:1px solid rgba(0,212,164,0.3);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--green)}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+#session-info{font-family:var(--f-mono);font-size:11px;color:var(--t3)}
+.header-spacer{flex:1}
+.status-group{display:flex;align-items:center;gap:5px}
+.s-indicator{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:6px;border:1px solid;font-size:9px;font-weight:700;letter-spacing:0.5px;transition:all 0.3s}
+.s-indicator .s-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.s-indicator.ok{background:rgba(0,212,164,0.1);border-color:rgba(0,212,164,0.3);color:var(--green)}
+.s-indicator.ok .s-dot{background:var(--green);animation:pulse 2s infinite}
+.s-indicator.err{background:rgba(255,85,85,0.08);border-color:rgba(255,85,85,0.25);color:#ff7b7b}
+.s-indicator.err .s-dot{background:#ff5555}
+.s-indicator.warn{background:rgba(227,179,65,0.1);border-color:rgba(227,179,65,0.3);color:var(--warning)}
+.s-indicator.warn .s-dot{background:var(--warning)}
 
-html, body {
-  height: 100vh;
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--t1);
-  font-family: var(--f-body);
-  font-size: 13px;
-}
+/* ── NAV TABS ── */
+#nav{background:var(--bg);border-bottom:1px solid var(--border);display:flex;padding:0 14px;gap:2px;flex-shrink:0}
+.nav-tab{padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:0.5px;color:var(--t3);border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+.nav-tab:hover{color:var(--t2)}
+.nav-tab.active{color:var(--green);border-bottom-color:var(--green)}
+.nav-tab .badge{display:inline-block;background:rgba(0,212,164,0.15);color:var(--green);font-size:8px;padding:1px 5px;border-radius:10px;margin-left:5px}
+.nav-tab .rbadge{display:inline-block;background:rgba(255,85,85,0.15);color:#ff9b9b;font-size:8px;padding:1px 5px;border-radius:10px;margin-left:5px}
 
-@keyframes pulse       { 0%,100%{opacity:1} 50%{opacity:0.3} }
-@keyframes snapIn      { 0%{transform:scale(0.92) translateY(4px);opacity:0} 100%{transform:scale(1) translateY(0);opacity:1} }
-@keyframes glowPulse   { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 20px rgba(0,212,164,0.12)} }
-@keyframes fadeSlideUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-@keyframes borderGlow  { 0%,100%{border-color:var(--border)} 50%{border-color:rgba(0,212,164,0.3)} }
-@keyframes cardFlip    { 0%{transform:rotateY(90deg);opacity:0} 100%{transform:rotateY(0);opacity:1} }
+/* ── APP ── */
+#app{display:flex;flex-direction:column;height:calc(100vh - 44px - 40px);overflow:hidden}
 
-/* ── HEADER ──────────────────────────────────────────────────────────────────── */
-#header {
-  height: 48px;
-  background: #161b22;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  gap: 12px;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 10;
-}
+/* ── TAB CONTENT ── */
+.tab-content{display:none;flex:1;min-height:0;overflow:hidden}
+.tab-content.active{display:flex;flex-direction:column}
 
-.logo {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--t1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.logo-suit { color: var(--green); }
-.logo em   { color: var(--green); font-style: normal; }
+/* ── LIVE TAB ── */
+#main-grid{display:grid;grid-template-columns:200px 1fr 220px;gap:1px;background:var(--border);flex:1;min-height:0}
+.panel{background:var(--bg-panel);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border-md) transparent}
 
-.live-badge {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  background: rgba(0,212,164,0.1);
-  border: 1px solid rgba(0,212,164,0.3);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--green);
-}
-.live-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: pulse 1.5s ease-in-out infinite;
-}
+/* Decision panel */
+#decision-panel{padding:0}
+#decision-panel.your-turn{animation:glowPulse 2s ease-in-out infinite}
+#your-turn-banner{display:none;align-items:center;justify-content:center;gap:6px;padding:6px 14px;background:rgba(0,212,164,0.08);border-bottom:1px solid rgba(0,212,164,0.2);font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--green)}
+#your-turn-banner.show{display:flex}
+.turn-pulse{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1s infinite}
+#action-display{padding:16px 12px 12px;border-bottom:1px solid var(--border);text-align:center;position:relative}
+#action-emoji{font-size:20px;margin-bottom:6px;display:block}
+#action-text{font-size:36px;font-weight:700;line-height:1;margin-bottom:3px;transition:color 0.3s}
+#decision-panel.your-turn #action-text{animation:snapIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards}
+.action-snap{animation:snapIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards}
+.action-raise{color:var(--raise)}.action-bet{color:var(--bet)}.action-call{color:var(--call)}
+.action-check{color:var(--check)}.action-fold{color:var(--fold)}.action-wait{color:var(--t4)}
+#action-sizing{font-family:var(--f-mono);font-size:13px;color:var(--t2)}
+#hand-strength{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-top:4px;min-height:14px;transition:color 0.3s}
+#hand-strength.strong{color:var(--warning)}#hand-strength.made{color:var(--green)}#hand-strength.draw{color:var(--blue)}#hand-strength.nothing{color:var(--t4)}
+#bet-context-box{padding:8px 12px;border-bottom:1px solid var(--border);display:none}
+.bc-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0}
+.bc-label{color:var(--t3);font-family:var(--f-mono);font-size:9px;letter-spacing:0.5px}
+.bc-val{color:var(--t1);font-family:var(--f-mono);font-size:11px}.bc-val.highlight{color:var(--warning)}
+#equity-bar-wrap{height:3px;background:var(--border-md);border-radius:1px;margin-top:6px;overflow:hidden}
+#pot-odds-fill{height:100%;border-radius:1px;background:var(--green);transition:width 0.5s;width:0%}
+#reasons-list{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
+.reason-item{display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--t2);line-height:1.4}
+.reason-item::before{content:'▸';color:var(--green);flex-shrink:0;font-size:9px;margin-top:2px}
+.reason-item.danger{color:#ff9b9b}.reason-item.danger::before{color:var(--red)}
+#stage-bar{padding:6px 12px;display:flex;gap:3px;border-bottom:1px solid var(--border)}
+.stage-pill{padding:2px 8px;border-radius:4px;font-size:8px;font-weight:700;letter-spacing:1px;color:var(--t4);background:var(--bg-card);border:1px solid var(--border);transition:all 0.2s}
+.stage-pill.active{background:rgba(0,212,164,0.1);border-color:rgba(0,212,164,0.3);color:var(--green)}
+#stats-bar{padding:6px 12px;display:flex;gap:5px;flex-wrap:wrap}
+.stat-chip{padding:2px 7px;border-radius:4px;font-family:var(--f-mono);font-size:9px;color:var(--t3);background:var(--bg-card);border:1px solid var(--border)}
+.stat-chip span{color:var(--t1);font-weight:700}
+#flush-banner{padding:5px 10px;border-radius:5px;font-size:11px;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(88,166,255,0.25);margin-bottom:6px;display:none}
+#flush-banner.active{display:block}
+#waiting-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;gap:8px}
+.ws-icon{font-size:28px;opacity:0.15}.ws-label{font-size:20px;font-weight:700;letter-spacing:3px;color:var(--t4)}.ws-sub{font-size:10px;color:var(--t4);text-align:center}
 
-#session-info {
-  font-family: var(--f-mono);
-  font-size: 11px;
-  color: var(--t3);
-}
+/* Cards */
+#center-panel{display:flex;flex-direction:column}
+.cards-section{padding:10px 12px;border-bottom:1px solid var(--border)}
+.cards-row{display:flex;align-items:center;gap:7px;margin-bottom:7px}.cards-row:last-child{margin-bottom:0}
+.cards-row-label{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--t2);width:38px;flex-shrink:0;text-transform:uppercase}
+.card{width:38px;height:52px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--f-mono);gap:1px;position:relative;transition:transform 0.2s}
+.card:hover{transform:translateY(-2px)}
+.card .rank{font-size:14px;font-weight:600;line-height:1}.card .suit{font-size:13px;line-height:1}
+.card.hearts{color:#FF3B3B;border:1px solid rgba(255,59,59,0.4);background:rgba(255,59,59,0.06)}
+.card.diamonds{color:#FF3B3B;border:1px solid rgba(255,59,59,0.4);background:rgba(255,59,59,0.06)}
+.card.spades{color:#E6EDF3;border:1px solid rgba(230,237,243,0.25);background:#161b22}
+.card.clubs{color:#C8D6E0;border:1px solid rgba(200,214,224,0.25);background:#161b22}
+.card.red{color:#FF3B3B;border:1px solid rgba(255,59,59,0.4);background:rgba(255,59,59,0.06)}
+.card.black{color:#E6EDF3;border:1px solid rgba(230,237,243,0.25);background:#161b22}
+.card.hero{box-shadow:0 0 10px rgba(0,212,164,0.2);border-color:rgba(0,212,164,0.5) !important}
+.card.connecting{border-color:rgba(88,166,255,0.5) !important;box-shadow:0 0 8px rgba(88,166,255,0.15)}
+.connect-star{position:absolute;top:2px;right:3px;font-size:7px;color:var(--blue)}
+#carry-section{padding:8px 12px;border-bottom:1px solid var(--border);display:none}
+#carry-section.active{display:block}
+.carry-header{display:flex;align-items:center;gap:5px;margin-bottom:6px;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--warning);text-transform:uppercase}
+#carry-cards{display:flex;gap:4px;flex-wrap:wrap}
+.carry-card-chip,.carry-chip{padding:3px 8px;border-radius:4px;font-family:var(--f-mono);font-size:11px;background:var(--bg-card);border:1px solid var(--border);color:var(--t2)}
+.carry-card-chip.hotspot,.carry-chip.hot{background:rgba(227,179,65,0.1);border-color:rgba(227,179,65,0.3);color:var(--warning)}
+.carry-card-chip.on-board{border-color:rgba(0,212,164,0.4);color:var(--green)}
+.carry-pct{font-size:9px;opacity:0.7;margin-left:3px}
+#predicted-section{padding:10px 12px;border-bottom:1px solid var(--border)}
+#predicted-label{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);margin-bottom:6px;text-transform:uppercase}
+#predicted-cards{display:flex;gap:4px;flex-wrap:wrap}
+.pred-card{width:30px;height:40px;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--f-mono);gap:1px}
+.pred-card.hearts,.pred-card.diamonds{color:#FF3B3B;border:1px solid rgba(255,59,59,0.3);background:rgba(255,59,59,0.04)}
+.pred-card.spades{color:var(--green);border:1px solid rgba(0,212,164,0.2);background:rgba(0,212,164,0.04)}
+.pred-card.clubs{color:var(--green);border:1px solid rgba(0,212,164,0.2);background:rgba(0,212,164,0.04)}
+.pred-card.connecting{border-color:rgba(88,166,255,0.4) !important;color:var(--blue) !important;background:var(--blue-dim) !important}
+.pred-card .rank{font-size:12px;line-height:1}.pred-card .suit{font-size:10px;line-height:1}
+#history-section{flex:1;min-height:0;overflow-y:auto}
+#hand-history-list{padding:6px 12px}
+.hand-entry{display:grid;grid-template-columns:26px 48px 1fr;gap:6px;align-items:start;padding:6px 0;border-bottom:1px solid var(--border);animation:fadeSlideUp 0.3s ease forwards}
+.hand-entry:last-child{border-bottom:none}
+.hand-num{font-family:var(--f-mono);font-size:9px;color:var(--t4);padding-top:2px}
+.hand-result{font-size:10px;font-weight:700;letter-spacing:1px;padding-top:1px}
+.hand-result.won{color:var(--green)}.hand-result.lost{color:var(--red)}.hand-result.folded{color:var(--t4)}
+.hand-cards{font-family:var(--f-mono);font-size:11px;color:var(--t2)}
+.hand-note{font-size:10px;color:var(--warning);margin-top:2px;line-height:1.4}
+.hand-pending{font-size:10px;color:var(--t4);font-style:italic;margin-top:2px}
 
-.header-spacer { flex: 1; }
+/* Player HUB */
+#player-panel{display:flex;flex-direction:column}
+#player-list{padding:6px 8px;display:flex;flex-direction:column;gap:6px}
+.player-card{border-radius:7px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);position:relative;overflow:hidden;transition:border-color 0.2s,transform 0.15s;cursor:default}
+.player-card:hover{transform:translateX(2px)}
+.player-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
+.player-card.danger{border-color:rgba(255,85,85,0.3)}.player-card.danger::before{background:var(--red)}
+.player-card.feeder{border-color:rgba(88,166,255,0.25)}.player-card.feeder::before{background:var(--blue)}
+.player-card.neutral::before{background:var(--border-md)}
+.p-name-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.p-name{font-size:11px;font-weight:700;color:var(--t1)}
+.p-tag{font-size:7px;font-weight:700;letter-spacing:1px;padding:2px 5px;border-radius:4px}
+.p-tag.danger{background:rgba(255,85,85,0.12);color:#ff9b9b;border:1px solid rgba(255,85,85,0.2)}
+.p-tag.feeder{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(88,166,255,0.2)}
+.hud-big4{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:5px}
+.hud-stat{text-align:center}
+.hud-val{font-family:var(--f-mono);font-size:13px;font-weight:500;color:var(--t1);line-height:1.1}
+.hud-val.danger{color:#ff9b9b}.hud-val.warn{color:var(--warning)}.hud-val.good{color:var(--green)}
+.hud-lbl{font-size:7px;font-weight:700;letter-spacing:1px;color:var(--t4);text-transform:uppercase}
+.winrate-bar{height:2px;background:var(--border);border-radius:1px;margin:3px 0;overflow:hidden}
+.winrate-fill{height:100%;border-radius:1px;transition:width 0.5s}
+.hud-preflop{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding-top:4px;border-top:1px solid var(--border)}
+.hud-pf-stat{text-align:center}
+.hud-pf-val{font-family:var(--f-mono);font-size:10px;color:var(--t2)}
+.hud-pf-lbl{font-size:7px;color:var(--t4);letter-spacing:0.5px;text-transform:uppercase}
+.p-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
+.p-sample{font-size:9px;color:var(--t4);font-family:var(--f-mono)}
+.claude-btn{font-size:7px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:20px;background:var(--purple-dim);color:var(--purple);border:1px solid rgba(188,140,255,0.28);cursor:pointer;transition:all 0.2s}
+.claude-btn:hover{background:rgba(188,140,255,0.2)}
 
-.status-group { display: flex; align-items: center; gap: 6px; }
+/* Section label */
+.sec-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t2);padding:9px 12px 7px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.sec-count{font-size:9px;padding:1px 6px;border-radius:10px;background:var(--bg-card);color:var(--t3);border:1px solid var(--border);font-family:var(--f-mono)}
 
-.s-indicator {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  transition: all 0.3s;
-}
-.s-indicator .s-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-.s-indicator.ok    { background:rgba(0,212,164,0.1); border-color:rgba(0,212,164,0.3); color:var(--green); }
-.s-indicator.ok .s-dot { background:var(--green); animation: pulse 2s infinite; }
-.s-indicator.err   { background:rgba(255,85,85,0.08); border-color:rgba(255,85,85,0.25); color:#ff7b7b; }
-.s-indicator.err .s-dot { background:#ff5555; }
-.s-indicator.warn  { background:rgba(227,179,65,0.1); border-color:rgba(227,179,65,0.3); color:var(--warning); }
-.s-indicator.warn .s-dot { background:var(--warning); }
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px;gap:5px;color:var(--t4);text-align:center}
+.empty-icon{font-size:18px;opacity:0.3}.empty-text{font-size:11px;line-height:1.5;font-family:var(--f-mono)}
 
-.popout-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 8px;
-  background: var(--green);
-  border: none;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #0d1117;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.popout-btn:hover { background: #00e8b5; }
+/* ── BOTTOM STRIP (always visible) ── */
+#bottom-strip{display:grid;grid-template-columns:1fr 1fr 1fr 160px;gap:1px;background:var(--border);height:155px;flex-shrink:0;border-top:1px solid var(--border-md)}
+.b-panel{background:var(--bg-panel);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.b-panel:last-child{border-right:none}
+.b-panel-content{flex:1;overflow-y:auto;padding:6px 12px}
+.narrative-entry{padding:5px 0;border-bottom:1px solid var(--border);animation:fadeSlideUp 0.3s ease forwards}
+.narrative-entry:last-child{border-bottom:none}
+.narrative-meta{font-family:var(--f-mono);font-size:12px;color:var(--green);margin-bottom:2px;display:flex;gap:5px;flex-wrap:wrap}
+.narrative-text{font-size:11px;color:var(--t2);line-height:1.4}
+.know-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px;animation:fadeSlideUp 0.2s ease forwards}
+.know-row:last-child{border-bottom:none}
+.know-k{font-family:var(--f-mono);font-size:11px;color:var(--t2)}
+.know-v{font-family:var(--f-mono);font-size:11px;color:var(--t1);font-weight:600}
+.know-v.gold{color:var(--warning)}.know-v.danger{color:#ff9b9b}.know-v.green{color:var(--green)}
+#tools-panel{background:var(--bg-panel);padding:7px 9px;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+#upload-zone{border:1px dashed var(--border-md);border-radius:5px;padding:6px 8px;text-align:center;cursor:pointer;transition:all 0.2s;flex-shrink:0}
+#upload-zone:hover{border-color:rgba(0,212,164,0.4);background:rgba(0,212,164,0.05)}
+.uz-icon{font-size:13px;display:block;margin-bottom:2px}
+.uz-text{font-size:10px;color:var(--t2);font-weight:600}
+.uz-sub{font-size:9px;color:var(--t3);margin-top:1px}
+#upload-status{font-family:var(--f-mono);font-size:9px;color:var(--warning);min-height:12px}
+.tool-btn{width:100%;padding:5px 9px;border-radius:5px;background:var(--bg-card);border:1px solid var(--border);color:var(--t2);font-size:11px;font-weight:700;letter-spacing:0.5px;cursor:pointer;transition:all 0.2s;text-align:left}
+.tool-btn:hover{border-color:var(--border-hi);color:var(--t1);background:var(--bg-hover)}
+.tool-btn.primary{background:rgba(0,212,164,0.1);border-color:rgba(0,212,164,0.3);color:var(--green)}
+.tool-btn.primary:hover{background:rgba(0,212,164,0.2)}
 
-/* ── LAYOUT ───────────────────────────────────────────────────────────────────── */
-#app {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 48px);
-  overflow: hidden;
-}
+/* ── SESSION TAB ── */
+#tab-session .s-inner{padding:12px;display:flex;flex-direction:column;gap:10px;height:100%;overflow-y:auto}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat-box{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+.stat-val{font-family:var(--f-mono);font-size:22px;font-weight:600;color:var(--t1);line-height:1}
+.stat-val.t{color:var(--green)}.stat-val.r{color:var(--red)}.stat-val.a{color:var(--warning)}
+.stat-lbl{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-top:3px}
+.timeline-box{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+.timeline-lbl{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:8px}
+.tl-head{display:grid;grid-template-columns:28px 100px 55px 55px 55px 1fr;gap:4px;padding:3px 0;border-bottom:1px solid var(--border-md);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase}
+.tl-row{display:grid;grid-template-columns:28px 100px 55px 55px 55px 1fr;gap:4px;padding:5px 0;border-bottom:1px solid var(--border);align-items:center}
+.tl-row:last-child{border-bottom:none}
+.tl-num{font-family:var(--f-mono);font-size:10px;color:var(--t3)}
+.tl-cards{font-family:var(--f-mono);font-size:11px;color:var(--t2)}
+.tl-eng{font-size:10px;font-weight:700}
+.tl-eng.raise{color:var(--warning)}.tl-eng.call{color:var(--green)}.tl-eng.fold{color:var(--t3)}.tl-eng.bet{color:var(--blue)}.tl-eng.check{color:var(--t2)}
+.tl-act{font-size:10px;color:var(--t3)}
+.tl-out{font-size:10px;font-weight:700}
+.tl-out.won{color:var(--green)}.tl-out.lost{color:var(--red)}.tl-out.fold{color:var(--t3)}
+.tl-pot{font-family:var(--f-mono);font-size:10px;color:var(--t3);text-align:right}
+.tl-alert{font-size:10px;color:var(--warning);padding:4px 0;grid-column:1/-1}
+.stack-graph{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:10px 12px;height:70px}
+.sg-bars{display:flex;align-items:flex-end;gap:2px;height:42px;margin-top:4px}
+.sg-bar{flex:1;border-radius:2px 2px 0 0;background:var(--green);opacity:0.7;min-height:2px}
+.sg-bar.neg{background:var(--red)}
 
-#main-grid {
-  display: grid;
-  grid-template-columns: 260px 1fr 280px;
-  gap: 1px;
-  background: var(--border);
-  flex: 1;
-  min-height: 0;
-}
+/* ── PLAYERS TAB ── */
+#tab-players .p-inner{display:grid;grid-template-columns:240px 1fr;gap:1px;background:var(--border);height:100%}
+.plist-panel{background:var(--bg-panel);overflow-y:auto}
+.plist-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s}
+.plist-item:hover{background:var(--bg-card)}
+.plist-item.selected{background:rgba(0,212,164,0.06);border-left:2px solid var(--green)}
+.plist-avatar{width:32px;height:32px;border-radius:50%;background:var(--bg-hover);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t2);flex-shrink:0}
+.plist-avatar.danger{background:rgba(255,85,85,0.12);color:#ff9b9b}
+.plist-name{font-size:12px;font-weight:700;color:var(--t1)}
+.plist-sub{font-size:10px;color:var(--t3);font-family:var(--f-mono)}
+.plist-badge{margin-left:auto;font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.plist-badge.danger{background:rgba(255,85,85,0.12);color:#ff9b9b}
+.plist-badge.ok{background:rgba(0,212,164,0.1);color:var(--green)}
+.plist-badge.new{background:var(--bg-hover);color:var(--t3)}
+.pdetail{background:var(--bg-panel);padding:14px;overflow-y:auto}
+.pdetail-name{font-size:18px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.pdetail-profile{display:inline-block;font-size:10px;color:var(--green);background:rgba(0,212,164,0.1);border:1px solid rgba(0,212,164,0.3);padding:2px 10px;border-radius:20px;margin-bottom:10px;font-family:var(--f-mono)}
+.pdetail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.dstat{background:var(--bg-card);border:1px solid var(--border);border-radius:5px;padding:8px;text-align:center}
+.dv{font-family:var(--f-mono);font-size:18px;font-weight:600;color:var(--t1)}
+.dv.d{color:#ff9b9b}.dv.t{color:var(--green)}.dv.a{color:var(--warning)}
+.dl{font-size:8px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase}
+.notes-box{background:var(--bg-card);border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:8px}
+.notes-lbl{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:4px}
+.notes-input{width:100%;background:transparent;border:none;outline:none;font-size:11px;color:var(--t2);font-family:var(--f-body);line-height:1.5;resize:none;min-height:36px}
+.claude-analysis-box{background:rgba(0,212,164,0.05);border:1px solid rgba(0,212,164,0.2);border-radius:5px;padding:10px;font-size:11px;color:var(--warning);line-height:1.6}
+.claude-analysis-box.loading{color:var(--t3);font-style:italic;background:var(--bg-card);border-color:var(--border)}
+.ask-claude-btn{margin-top:8px;width:100%;padding:7px;border-radius:5px;background:var(--purple-dim);border:1px solid rgba(188,140,255,0.3);color:var(--purple);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s}
+.ask-claude-btn:hover{background:rgba(188,140,255,0.2)}
 
-.panel {
-  background: var(--bg-panel);
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-md) transparent;
-}
+/* ── ANALYSIS TAB ── */
+#tab-analysis .a-inner{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);height:100%}
+.a-panel{background:var(--bg-panel);padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.a-box{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+.a-box-title{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:8px}
+.brief-item{display:flex;gap:8px;padding:4px 0;font-size:11px;color:var(--t2);border-bottom:1px solid var(--border)}
+.brief-item:last-child{border-bottom:none}
+.brief-item strong{color:var(--warning);font-family:var(--f-mono);font-weight:700;flex-shrink:0}
+.heat-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.heat-card{padding:4px 2px;border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--f-mono);font-size:9px;font-weight:700}
+.heat-card.h5{background:rgba(0,212,164,0.7);color:#0d1117}
+.heat-card.h4{background:rgba(0,212,164,0.45);color:var(--t1)}
+.heat-card.h3{background:rgba(0,212,164,0.25);color:var(--t2)}
+.heat-card.h2{background:rgba(0,212,164,0.12);color:var(--t3)}
+.heat-card.h1{background:var(--bg-card);color:var(--t4);border:1px solid var(--border)}
+.missed-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.missed-row:last-child{border-bottom:none}
+.missed-cards{font-family:var(--f-mono);color:var(--t2);flex:1}
+.missed-had{color:var(--warning)}
+.missed-chips{font-family:var(--f-mono);color:var(--red);font-weight:700}
+.missed-total{font-size:10px;font-weight:700;color:var(--red);padding-top:6px;border-top:1px solid var(--border);margin-top:4px}
+.pot-odds-display{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.pod-stat{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px 10px}
+.pod-lbl{font-size:9px;color:var(--t3);font-family:var(--f-mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+.pod-val{font-family:var(--f-mono);font-size:20px;font-weight:700;color:var(--t1)}
+.pot-bar{background:var(--bg);border-radius:3px;height:6px;overflow:hidden;margin-bottom:4px}
+.pot-bar-fill{height:100%;background:var(--green);border-radius:3px;transition:width 0.3s}
+.pot-equity-txt{font-size:11px;color:var(--green);font-family:var(--f-mono)}
 
-#bottom-strip {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 180px;
-  gap: 1px;
-  background: var(--border);
-  height: 220px;
-  flex-shrink: 0;
-  border-top: 1px solid var(--border-md);
-}
+/* ── SETTINGS TAB ── */
+#tab-settings .set-inner{padding:14px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;height:100%}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px}
+.setting-lbl{font-size:12px;font-weight:600;color:var(--t1)}
+.setting-sub{font-size:10px;color:var(--t3);margin-top:2px}
+.toggle{width:36px;height:20px;border-radius:10px;background:var(--border-md);border:1px solid var(--border-hi);position:relative;cursor:pointer;flex-shrink:0}
+.toggle.on{background:rgba(0,212,164,0.3);border-color:rgba(0,212,164,0.5)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--t3);transition:left 0.2s}
+.toggle.on::after{left:18px;background:var(--green)}
+.slider-wrap{display:flex;align-items:center;gap:8px}
+.slider-val{font-family:var(--f-mono);font-size:12px;color:var(--green);width:32px;text-align:right}
 
-/* ── SECTION LABEL ────────────────────────────────────────────────────────────── */
-.sec-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--t2);
-  padding: 10px 14px 8px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.sec-label .sec-count {
-  font-size: 9px;
-  padding: 1px 6px;
-  border-radius: 10px;
-  background: var(--bg-card);
-  color: var(--t3);
-  border: 1px solid var(--border);
-  font-family: var(--f-mono);
-}
+/* ── PLAYER MODAL ── */
+#player-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#player-modal.open{display:flex}
+#player-modal-inner{background:#161b22;border:1px solid var(--border-hi);border-radius:10px;width:560px;max-height:80vh;overflow-y:auto;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}
+#modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+#modal-player-name{font-size:22px;font-weight:700;color:var(--t1)}
+#modal-close{width:30px;height:30px;border-radius:5px;background:var(--bg-card);border:1px solid var(--border);color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all 0.2s}
+#modal-close:hover{color:var(--t1);border-color:var(--border-hi)}
+.modal-sec{margin-bottom:16px}
+.modal-sec-title{font-size:9px;font-weight:700;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+#modal-profile{display:inline-block;padding:3px 12px;border-radius:20px;font-family:var(--f-mono);font-size:10px;background:rgba(0,212,164,0.1);color:var(--green);border:1px solid rgba(0,212,164,0.3);margin-bottom:12px}
+.modal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+.modal-stat-box{background:var(--bg-card);border:1px solid var(--border);border-radius:5px;padding:8px;text-align:center}
+.modal-stat-val{font-family:var(--f-mono);font-size:20px;font-weight:500;color:var(--t1)}
+.modal-stat-val.danger{color:#ff9b9b}.modal-stat-val.warn{color:var(--warning)}.modal-stat-val.good{color:var(--green)}
+.modal-stat-lbl{font-size:8px;letter-spacing:1px;color:var(--t3);text-transform:uppercase}
+#modal-narrative{font-size:12px;color:var(--warning);line-height:1.7;padding:12px;background:rgba(227,179,65,0.06);border:1px solid rgba(227,179,65,0.2);border-radius:5px;white-space:pre-line}
+#modal-narrative.loading{color:var(--t3);font-style:italic;background:var(--bg-card);border-color:var(--border)}
+.modal-ask-btn{margin-top:8px;padding:8px 18px;border-radius:6px;background:var(--purple-dim);border:1px solid rgba(188,140,255,0.3);color:var(--purple);font-size:10px;font-weight:700;letter-spacing:0.5px;cursor:pointer;transition:all 0.2s;width:100%}
+.modal-ask-btn:hover{background:rgba(188,140,255,0.2)}
 
-/* ── DECISION PANEL ───────────────────────────────────────────────────────────── */
-#decision-panel { padding: 0; }
-#decision-panel.your-turn {
-  --glow-color: rgba(0,212,164,0.1);
-  animation: glowPulse 2s ease-in-out infinite;
-}
-
-#your-turn-banner {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: rgba(0,212,164,0.08);
-  border-bottom: 1px solid rgba(0,212,164,0.2);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: var(--green);
-}
-#your-turn-banner.show { display: flex; }
-.turn-pulse { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 1s infinite; }
-
-#action-display {
-  padding: 20px 16px 16px;
-  border-bottom: 1px solid var(--border);
-  text-align: center;
-  position: relative;
-}
-
-#action-emoji { font-size: 28px; margin-bottom: 8px; display: block; }
-
-#action-text {
-  font-size: 52px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  line-height: 1;
-  margin-bottom: 4px;
-  transition: color 0.3s;
-}
-#action-text { font-family: var(--f-body); }
-#decision-panel.your-turn #action-text {
-  animation: snapIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards;
-}
-.action-snap { animation: snapIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-
-.action-raise { color: var(--raise); }
-.action-bet   { color: var(--bet); }
-.action-call  { color: var(--call); }
-.action-check { color: var(--check); }
-.action-fold  { color: var(--fold); }
-.action-wait  { color: var(--t4); }
-
-#action-sizing {
-  font-family: var(--f-mono);
-  font-size: 16px;
-  color: var(--t2);
-}
-
-#hand-strength {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--t3);
-  margin-top: 6px;
-  min-height: 16px;
-  transition: color 0.3s;
-}
-#hand-strength.strong { color: var(--warning); }
-#hand-strength.made   { color: var(--green); }
-#hand-strength.draw   { color: var(--blue); }
-#hand-strength.nothing{ color: var(--t4); }
-
-/* Bet context */
-#bet-context-box {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  display: none;
-}
-.bc-row { display:flex; justify-content:space-between; align-items:center; padding:3px 0; }
-.bc-row .bc-label { color:var(--t3); font-family:var(--f-mono); font-size:10px; letter-spacing:0.5px; }
-.bc-row .bc-val   { color:var(--t1); font-family:var(--f-mono); font-size:12px; }
-.bc-row .bc-val.highlight { color:var(--warning); }
-
-#equity-bar-wrap { height:4px; background:var(--border-md); border-radius:2px; margin-top:8px; overflow:hidden; }
-#pot-odds-fill { height:100%; border-radius:2px; background:var(--green); transition:width 0.5s; width:0%; }
-
-/* Reasons */
-#reasons-list { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:5px; }
-.reason-item { display:flex; align-items:flex-start; gap:7px; font-size:12px; color:var(--t2); line-height:1.4; }
-.reason-item::before { content:'▸'; color:var(--green); flex-shrink:0; font-size:10px; margin-top:2px; }
-.reason-item.danger { color:#ff9b9b; }
-.reason-item.danger::before { color:var(--red); }
-
-/* Stage pills */
-#stage-bar { padding:8px 14px; display:flex; gap:4px; border-bottom:1px solid var(--border); }
-.stage-pill {
-  padding:3px 10px; border-radius:4px;
-  font-size:9px; font-weight:700; letter-spacing:1px;
-  color:var(--t4); background:var(--bg-card); border:1px solid var(--border);
-  transition:all 0.2s;
-}
-.stage-pill.active { background:rgba(0,212,164,0.1); border-color:rgba(0,212,164,0.3); color:var(--green); }
-
-#stats-bar { padding:8px 14px; display:flex; gap:6px; flex-wrap:wrap; }
-.stat-chip { padding:3px 8px; border-radius:4px; font-family:var(--f-mono); font-size:10px; color:var(--t3); background:var(--bg-card); border:1px solid var(--border); }
-.stat-chip span { color:var(--t1); font-weight:700; }
-
-#flush-banner { padding:6px 10px; border-radius:6px; font-size:11px; color:var(--blue); background:var(--blue-dim); border:1px solid rgba(88,166,255,0.25); margin-bottom:8px; display:none; }
-#flush-banner.active { display:block; }
-
-/* Waiting state */
-#waiting-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 16px; gap:10px; }
-.ws-icon { font-size:32px; opacity:0.15; }
-.ws-label { font-size:22px; font-weight:700; letter-spacing:3px; color:var(--t4); }
-.ws-sub { font-size:11px; color:var(--t4); text-align:center; }
-
-/* ── CENTER PANEL ─────────────────────────────────────────────────────────────── */
-#center-panel { display:flex; flex-direction:column; }
-.cards-section { padding:12px 16px; border-bottom:1px solid var(--border); }
-.cards-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-.cards-row:last-child { margin-bottom:0; }
-.cards-row-label { font-size:10px; font-weight:700; letter-spacing:2px; color:var(--t2); width:40px; flex-shrink:0; text-transform:uppercase; }
-
-.card {
-  width:42px; height:56px; border-radius:6px;
-  border:1px solid var(--border-hi); background:var(--bg-card);
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  font-family:var(--f-mono); gap:1px; position:relative; transition:transform 0.2s;
-}
-.card:hover { transform:translateY(-2px); }
-.card .rank { font-size:16px; font-weight:600; line-height:1; }
-.card .suit { font-size:14px; line-height:1; }
-.card.hearts  { color:#FF3B3B; border-color:rgba(255,59,59,0.4); background:rgba(255,59,59,0.06); }
-.card.diamonds{ color:#FF3B3B; border-color:rgba(255,59,59,0.4); background:rgba(255,59,59,0.06); }
-.card.spades  { color:#E6EDF3; border-color:rgba(230,237,243,0.3); }
-.card.clubs   { color:#C8D6E0; border-color:rgba(200,214,224,0.3); }
-/* keep .red and .black for backwards compat */
-.card.red   { color:#FF3B3B; border-color:rgba(255,59,59,0.4); background:rgba(255,59,59,0.06); }
-.card.black { color:#E6EDF3; }
-.card.hero  { border-color:rgba(0,212,164,0.5); box-shadow:0 0 12px rgba(0,212,164,0.15); }
-.card.connecting { border-color:rgba(88,166,255,0.5); box-shadow:0 0 8px rgba(88,166,255,0.15); }
-.connect-star { position:absolute; top:2px; right:3px; font-size:7px; color:var(--blue); }
-
-#carry-section { padding:10px 16px; border-bottom:1px solid var(--border); display:none; }
-#carry-section.active { display:block; }
-.carry-header { display:flex; align-items:center; gap:6px; margin-bottom:8px; font-size:10px; font-weight:700; letter-spacing:1px; color:var(--warning); text-transform:uppercase; }
-#carry-cards { display:flex; gap:5px; flex-wrap:wrap; }
-.carry-card-chip, .carry-chip { padding:4px 10px; border-radius:4px; font-family:var(--f-mono); font-size:11px; background:var(--bg-card); border:1px solid var(--border); color:var(--t2); }
-.carry-card-chip.hotspot, .carry-chip.hot { background:rgba(227,179,65,0.1); border-color:rgba(227,179,65,0.3); color:var(--warning); }
-.carry-card-chip.on-board { border-color:rgba(0,212,164,0.4); color:var(--green); }
-.carry-pct { font-size:9px; opacity:0.7; margin-left:4px; }
-
-#predicted-section { padding:12px 16px; border-bottom:1px solid var(--border); }
-#predicted-label { font-size:10px; font-weight:700; letter-spacing:1px; color:var(--t3); margin-bottom:8px; text-transform:uppercase; }
-#predicted-cards { display:flex; gap:5px; flex-wrap:wrap; }
-.pred-card { width:34px; height:44px; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:var(--f-mono); gap:1px; border:1px solid rgba(0,212,164,0.2); background:rgba(0,212,164,0.04); color:var(--green); }
-.pred-card.connecting { border-color:rgba(88,166,255,0.4); color:var(--blue); background:var(--blue-dim); }
-.pred-card .rank { font-size:13px; line-height:1; }
-.pred-card .suit { font-size:10px; line-height:1; }
-
-#history-section { flex:1; min-height:0; overflow-y:auto; }
-#hand-history-list { padding:8px 16px; }
-.hand-entry { display:grid; grid-template-columns:28px 52px 1fr; gap:8px; align-items:start; padding:8px 0; border-bottom:1px solid var(--border); animation:fadeSlideUp 0.3s ease forwards; }
-.hand-entry:last-child { border-bottom:none; }
-.hand-num { font-family:var(--f-mono); font-size:10px; color:var(--t4); padding-top:2px; }
-.hand-result { font-size:11px; font-weight:700; letter-spacing:1px; padding-top:1px; }
-.hand-result.won    { color:var(--green); }
-.hand-result.lost   { color:var(--red); }
-.hand-result.folded { color:var(--t4); }
-.hand-cards { font-family:var(--f-mono); font-size:11px; color:var(--t2); }
-.hand-note  { font-size:10px; color:var(--warning); margin-top:3px; line-height:1.4; }
-.hand-pending { font-size:10px; color:var(--t4); font-style:italic; margin-top:3px; }
-
-/* ── PLAYER HUB ───────────────────────────────────────────────────────────────── */
-#player-panel { display:flex; flex-direction:column; }
-#player-list { padding:8px 12px; display:flex; flex-direction:column; gap:8px; }
-
-.player-card { border-radius:8px; padding:10px 12px; background:var(--bg-card); border:1px solid var(--border); position:relative; overflow:hidden; transition:border-color 0.2s, transform 0.15s; }
-.player-card:hover { transform:translateX(2px); }
-.player-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
-.player-card.danger { border-color:rgba(255,85,85,0.3); }
-.player-card.danger::before { background:var(--red); }
-.player-card.feeder { border-color:rgba(88,166,255,0.25); }
-.player-card.feeder::before { background:var(--blue); }
-.player-card.neutral::before { background:var(--border-md); }
-
-.p-name-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-.p-name { font-size:13px; font-weight:700; color:var(--t1); }
-.p-tag { font-size:8px; font-weight:700; letter-spacing:1px; padding:2px 7px; border-radius:4px; }
-.p-tag.danger { background:rgba(255,85,85,0.12); color:#ff9b9b; border:1px solid rgba(255,85,85,0.25); }
-.p-tag.feeder { background:var(--blue-dim); color:var(--blue); border:1px solid rgba(88,166,255,0.2); }
-
-.hud-big4 { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-bottom:6px; }
-.hud-stat { text-align:center; }
-.hud-val { font-family:var(--f-mono); font-size:16px; font-weight:500; color:var(--t1); line-height:1.1; }
-.hud-val.danger { color:#ff9b9b; }
-.hud-val.warn   { color:var(--warning); }
-.hud-val.good   { color:var(--green); }
-.hud-lbl { font-size:8px; font-weight:700; letter-spacing:1px; color:var(--t4); text-transform:uppercase; }
-
-.winrate-bar { height:3px; background:var(--border); border-radius:2px; margin:4px 0; overflow:hidden; }
-.winrate-fill { height:100%; border-radius:2px; transition:width 0.5s; }
-
-.hud-preflop { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; padding-top:6px; border-top:1px solid var(--border); }
-.hud-pf-stat { text-align:center; }
-.hud-pf-val { font-family:var(--f-mono); font-size:11px; color:var(--t2); }
-.hud-pf-lbl { font-size:8px; color:var(--t4); letter-spacing:0.5px; text-transform:uppercase; }
-
-.p-bottom { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
-.p-sample { font-size:10px; color:var(--t4); font-family:var(--f-mono); }
-.claude-btn { font-size:8px; font-weight:700; letter-spacing:1px; padding:3px 10px; border-radius:20px; background:var(--purple-dim); color:var(--purple); border:1px solid rgba(188,140,255,0.3); cursor:pointer; transition:all 0.2s; }
-.claude-btn:hover { background:rgba(188,140,255,0.2); }
-
-/* ── PLAYER MODAL ─────────────────────────────────────────────────────────────── */
-#player-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
-#player-modal.open { display:flex; }
-#player-modal-inner { background:#161b22; border:1px solid var(--border-hi); border-radius:12px; width:580px; max-height:80vh; overflow-y:auto; padding:24px; box-shadow:0 24px 64px rgba(0,0,0,0.6); }
-#modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-#modal-player-name { font-size:24px; font-weight:700; color:var(--t1); letter-spacing:0.5px; }
-#modal-close { width:32px; height:32px; border-radius:6px; background:var(--bg-card); border:1px solid var(--border); color:var(--t2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:all 0.2s; }
-#modal-close:hover { color:var(--t1); border-color:var(--border-hi); }
-.modal-sec { margin-bottom:18px; }
-.modal-sec-title { font-size:9px; font-weight:700; letter-spacing:2px; color:var(--t3); text-transform:uppercase; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
-#modal-profile { display:inline-block; padding:4px 14px; border-radius:20px; font-family:var(--f-mono); font-size:11px; background:rgba(0,212,164,0.1); color:var(--green); border:1px solid rgba(0,212,164,0.3); margin-bottom:14px; }
-.modal-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
-.modal-stat-box { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:10px; text-align:center; }
-.modal-stat-val { font-family:var(--f-mono); font-size:22px; font-weight:500; color:var(--t1); }
-.modal-stat-val.danger { color:#ff9b9b; }
-.modal-stat-val.warn   { color:var(--warning); }
-.modal-stat-val.good   { color:var(--green); }
-.modal-stat-lbl { font-size:9px; letter-spacing:1px; color:var(--t3); text-transform:uppercase; }
-#modal-narrative { font-size:13px; color:var(--warning); line-height:1.7; padding:14px; background:rgba(227,179,65,0.08); border:1px solid rgba(227,179,65,0.2); border-radius:6px; white-space:pre-line; }
-#modal-narrative.loading { color:var(--t3); font-style:italic; background:var(--bg-card); border-color:var(--border); }
-.modal-ask-btn { margin-top:10px; padding:9px 20px; border-radius:8px; background:var(--purple-dim); border:1px solid rgba(188,140,255,0.3); color:var(--purple); font-size:11px; font-weight:700; letter-spacing:0.5px; cursor:pointer; transition:all 0.2s; width:100%; }
-.modal-ask-btn:hover { background:rgba(188,140,255,0.2); }
-
-/* ── BOTTOM STRIP ─────────────────────────────────────────────────────────────── */
-.b-panel { background:var(--bg-panel); display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); }
-.b-panel:last-child { border-right:none; }
-.b-panel-content { flex:1; overflow-y:auto; padding:8px 14px; }
-
-.narrative-entry { padding:7px 0; border-bottom:1px solid var(--border); animation:fadeSlideUp 0.3s ease forwards; }
-.narrative-entry:last-child { border-bottom:none; }
-.narrative-meta { font-family:var(--f-mono); font-size:12px; color:var(--green); margin-bottom:3px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.narrative-text { font-size:12px; color:var(--t2); line-height:1.4; }
-
-.know-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border); font-size:11px; animation:fadeSlideUp 0.2s ease forwards; }
-.know-row:last-child { border-bottom:none; }
-.know-k { font-family:var(--f-mono); font-size:12px; color:var(--t2); }
-.know-v { font-family:var(--f-mono); font-size:12px; color:var(--t1); font-weight:600; }
-.know-v.gold   { color:var(--warning); }
-.know-v.danger { color:#ff9b9b; }
-.know-v.green  { color:var(--green); }
-
-#tools-panel { background:var(--bg-panel); padding:8px 10px; display:flex; flex-direction:column; gap:4px; overflow:hidden; }
-#upload-zone { border:1px dashed var(--border-md); border-radius:6px; padding:7px 10px; text-align:center; cursor:pointer; transition:all 0.2s; flex-shrink:0; }
-#upload-zone:hover { border-color:rgba(0,212,164,0.4); background:rgba(0,212,164,0.05); }
-.uz-icon { font-size:14px; display:block; margin-bottom:2px; }
-.uz-text { font-size:10px; color:var(--t2); font-weight:600; }
-.uz-sub  { font-size:9px; color:var(--t3); margin-top:1px; }
-#upload-status { font-family:var(--f-mono); font-size:10px; color:var(--warning); min-height:14px; }
-
-.tool-btn { width:100%; padding:6px 10px; border-radius:5px; background:var(--bg-card); border:1px solid var(--border); color:var(--t2); font-size:11px; font-weight:700; letter-spacing:0.5px; cursor:pointer; transition:all 0.2s; text-align:left; }
-.tool-btn:hover { border-color:var(--border-hi); color:var(--t1); background:var(--bg-hover); }
-.tool-btn.primary { background:rgba(0,212,164,0.1); border-color:rgba(0,212,164,0.3); color:var(--green); }
-.tool-btn.primary:hover { background:rgba(0,212,164,0.2); }
-
-.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px 16px; gap:6px; color:var(--t4); text-align:center; }
-.empty-icon { font-size:20px; opacity:0.4; }
-.empty-text { font-size:11px; line-height:1.5; }
-
-::-webkit-scrollbar { width:4px; }
-::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:var(--border-md); border-radius:2px; }
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border-md);border-radius:2px}
 </style>
 </head>
 <body>
 
-<!-- ── HEADER ── -->
 <div id="header">
-  <div class="logo">
-    <span class="logo-suit">♠</span>
-    POKER <em>ADVISOR</em> PRO
-  </div>
+  <div class="logo"><span class="logo-suit">♠</span>POKER <em>ADVISOR</em> PRO</div>
   <div class="live-badge"><span class="live-dot"></span>LIVE</div>
-  <div id="session-info" style="font-family:var(--f-mono);font-size:11px;color:var(--t4)">SESSION —</div>
+  <div id="session-info" style="font-family:var(--f-mono);font-size:11px;color:var(--t3)">SESSION —</div>
   <div class="header-spacer"></div>
   <div class="status-group">
     <div class="s-indicator err" id="ws-status"><span class="s-dot"></span>WS</div>
-    <div class="s-indicator err" id="mem0-status"><span class="s-dot"></span>MEM0</div>
+    <div class="s-indicator err" id="mem0-status"><span class="s-dot"></span>MEMO</div>
     <div class="s-indicator err" id="claude-status"><span class="s-dot"></span>CLAUDE</div>
     <div class="s-indicator warn" id="hands-status"><span class="s-dot"></span>0 HANDS</div>
   </div>
-
 </div>
 
-<!-- ── APP ── -->
+<div id="nav">
+  <div class="nav-tab active" onclick="switchTab('live',this)">LIVE</div>
+  <div class="nav-tab" onclick="switchTab('session',this)">SESSION</div>
+  <div class="nav-tab" id="players-tab-btn" onclick="switchTab('players',this)">PLAYERS</div>
+  <div class="nav-tab" onclick="switchTab('analysis',this)">ANALYSIS</div>
+  <div class="nav-tab" onclick="switchTab('settings',this)">SETTINGS</div>
+</div>
+
 <div id="app">
 
-  <!-- MAIN GRID -->
-  <div id="main-grid">
+  <!-- LIVE TAB -->
+  <div class="tab-content active" id="tab-live">
+    <div id="main-grid">
 
-    <!-- LEFT: DECISION -->
-    <div class="panel" id="decision-panel">
-      <div id="your-turn-banner"><span class="turn-pulse"></span>YOUR TURN TO ACT</div>
-
-      <div id="action-display">
-        <span id="action-emoji">🃏</span>
-        <div id="action-text" class="action-wait">WAITING</div>
-        <div id="action-sizing"></div>
-      <div id="hand-strength"></div>
-      </div>
-
-      <div id="bet-context-box">
-        <div class="bc-row"><span class="bc-label">AGGRESSOR</span><span class="bc-val" id="bc-aggressor">—</span></div>
-        <div class="bc-row"><span class="bc-label">THEIR BET</span><span class="bc-val" id="bc-their-bet">—</span></div>
-        <div class="bc-row"><span class="bc-label">YOUR BET</span><span class="bc-val" id="bc-your-bet">—</span></div>
-        <div class="bc-row"><span class="bc-label">CALL COSTS</span><span class="bc-val highlight" id="bc-call">—</span></div>
-        <div class="bc-row"><span class="bc-label">POT SIZE</span><span class="bc-val" id="bc-pot">—</span></div>
-        <div class="bc-row"><span class="bc-label">EQUITY NEEDED</span><span class="bc-val highlight" id="bc-equity">—</span></div>
-        <div id="equity-bar-wrap"><div id="pot-odds-fill"></div></div>
-      </div>
-
-      <div id="reasons-list">
-        <div class="empty-state" style="padding:12px">
-          <div class="empty-text">Reasons appear when model is ready</div>
+      <div class="panel" id="decision-panel">
+        <div id="your-turn-banner"><span class="turn-pulse"></span>YOUR TURN TO ACT</div>
+        <div id="action-display">
+          <span id="action-emoji">🃏</span>
+          <div id="action-text" class="action-wait">WAITING</div>
+          <div id="action-sizing"></div>
+          <div id="hand-strength"></div>
+        </div>
+        <div id="bet-context-box">
+          <div class="bc-row"><span class="bc-label">AGGRESSOR</span><span class="bc-val" id="bc-aggressor">—</span></div>
+          <div class="bc-row"><span class="bc-label">THEIR BET</span><span class="bc-val" id="bc-their-bet">—</span></div>
+          <div class="bc-row"><span class="bc-label">YOUR BET</span><span class="bc-val" id="bc-your-bet">—</span></div>
+          <div class="bc-row"><span class="bc-label">CALL COSTS</span><span class="bc-val highlight" id="bc-call">—</span></div>
+          <div class="bc-row"><span class="bc-label">POT SIZE</span><span class="bc-val" id="bc-pot">—</span></div>
+          <div class="bc-row"><span class="bc-label">EQUITY NEEDED</span><span class="bc-val highlight" id="bc-equity">—</span></div>
+          <div id="equity-bar-wrap"><div id="pot-odds-fill"></div></div>
+        </div>
+        <div id="reasons-list"><div class="empty-state" style="padding:10px"><div class="empty-text">Reasons appear when model is ready</div></div></div>
+        <div id="stage-bar">
+          <div class="stage-pill" id="sp-preflop">PRE</div>
+          <div class="stage-pill" id="sp-flop">FLOP</div>
+          <div class="stage-pill" id="sp-turn">TURN</div>
+          <div class="stage-pill" id="sp-river">RIVER</div>
+        </div>
+        <div id="stats-bar">
+          <div class="stat-chip"><span id="ms-hands">0</span> hands</div>
+          <div class="stat-chip"><span id="ms-carry">0</span>% carry</div>
+          <div class="stat-chip">btn: <span id="ms-dealer">—</span></div>
+          <div class="stat-chip"><span id="ms-blinds">—/—</span></div>
+        </div>
+        <div id="waiting-state">
+          <div class="ws-icon">🃏</div>
+          <div class="ws-label">WAITING</div>
+          <div class="ws-sub">Waiting for cards…</div>
         </div>
       </div>
 
-      <div id="stage-bar">
-        <div class="stage-pill" id="sp-preflop">PRE</div>
-        <div class="stage-pill" id="sp-flop">FLOP</div>
-        <div class="stage-pill" id="sp-turn">TURN</div>
-        <div class="stage-pill" id="sp-river">RIVER</div>
-      </div>
-
-      <div id="stats-bar">
-        <div class="stat-chip"><span id="ms-hands">0</span> hands</div>
-        <div class="stat-chip"><span id="ms-carry">0</span>% carry</div>
-        <div class="stat-chip">btn: <span id="ms-dealer">—</span></div>
-        <div class="stat-chip"><span id="ms-blinds">—/—</span></div>
-      </div>
-
-      <div id="waiting-state">
-        <div class="ws-icon">🃏</div>
-        <div class="ws-label">WAITING</div>
-        <div class="ws-sub">Waiting for cards…</div>
-      </div>
-    </div>
-
-    <!-- CENTER: CARDS + BOARD -->
-    <div class="panel" id="center-panel">
-      <div class="sec-label">Cards &amp; Board</div>
-
-      <div class="cards-section">
-        <div class="cards-row">
-          <div class="cards-row-label">YOU</div>
-          <div id="hole-cards" style="display:flex;gap:6px;align-items:center"></div>
-        </div>
-        <div class="cards-row" style="margin-top:8px">
-          <div class="cards-row-label">BOARD</div>
-          <div id="board-cards" style="display:flex;gap:5px;align-items:center">
-            <span style="font-family:var(--f-display);font-size:11px;letter-spacing:1px;color:var(--t4)">PREFLOP</span>
+      <div class="panel" id="center-panel">
+        <div class="sec-label">Cards &amp; Board</div>
+        <div class="cards-section">
+          <div class="cards-row">
+            <div class="cards-row-label">YOU</div>
+            <div id="hole-cards" style="display:flex;gap:5px;align-items:center"></div>
+          </div>
+          <div class="cards-row" style="margin-top:7px">
+            <div class="cards-row-label">BOARD</div>
+            <div id="board-cards" style="display:flex;gap:5px;align-items:center">
+              <span style="font-family:var(--f-mono);font-size:10px;letter-spacing:1px;color:var(--t4)">PREFLOP</span>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div id="carry-section">
-        <div id="flush-banner"></div>
-        <div class="carry-header">⚡ CARRY ALERT</div>
-        <div id="carry-cards"></div>
-        <div id="carry-flush-warnings" style="margin-top:6px"></div>
-        <div id="carry-hit-summary" style="font-size:10px;color:var(--t3);margin-top:4px;font-family:var(--f-mono)"></div>
-      </div>
-
-      <div id="predicted-section">
-        <div id="predicted-label" class="sec-label" style="padding:0;border:none;margin-bottom:8px">Predicted Cards</div>
-        <div id="predicted-cards">
-          <div class="empty-state" style="padding:8px"><div class="empty-text">Upload CSV or play hands to seed predictions</div></div>
+        <div id="carry-section">
+          <div id="flush-banner"></div>
+          <div class="carry-header">⚡ CARRY ALERT</div>
+          <div id="carry-cards"></div>
+          <div id="carry-flush-warnings" style="margin-top:5px"></div>
+          <div id="carry-hit-summary" style="font-size:10px;color:var(--t3);margin-top:3px;font-family:var(--f-mono)"></div>
+        </div>
+        <div id="predicted-section">
+          <div id="predicted-label" class="sec-label" style="padding:0;border:none;margin-bottom:6px">Predicted Cards</div>
+          <div id="predicted-cards"><div class="empty-state" style="padding:6px"><div class="empty-text">Upload CSV to enable predictions</div></div></div>
+        </div>
+        <div id="history-section">
+          <div class="sec-label">Last Hands</div>
+          <div id="hand-history-list"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No hands yet</div></div></div>
         </div>
       </div>
 
-      <div id="history-section">
-        <div class="sec-label">Last Hands</div>
-        <div id="hand-history-list">
-          <div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No hands yet</div></div>
+      <div class="panel" id="player-panel">
+        <div class="sec-label">Player HUB <span class="sec-count" id="player-count">0</span></div>
+        <div id="player-list"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">Players appear after hands are tracked</div></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SESSION TAB -->
+  <div class="tab-content" id="tab-session">
+    <div class="s-inner">
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-val t" id="sess-wr">—%</div><div class="stat-lbl">Win Rate</div></div>
+        <div class="stat-box"><div class="stat-val a" id="sess-carry">—%</div><div class="stat-lbl">Carry Rate</div></div>
+        <div class="stat-box"><div class="stat-val" id="sess-hands">—</div><div class="stat-lbl">Hands</div></div>
+        <div class="stat-box"><div class="stat-val" id="sess-net">—</div><div class="stat-lbl">Net Chips</div></div>
+      </div>
+      <div class="timeline-box">
+        <div class="timeline-lbl">Hand Replay — Engine vs You vs Outcome</div>
+        <div class="tl-head"><div>#</div><div>Your Hand</div><div>Engine</div><div>You Did</div><div>Result</div><div style="text-align:right">Pot</div></div>
+        <div id="session-timeline"><div class="empty-state" style="padding:14px"><div class="empty-text">Play hands to see replay</div></div></div>
+      </div>
+      <div class="stack-graph">
+        <div class="timeline-lbl">Stack over session</div>
+        <div class="sg-bars" id="stack-graph-bars"><div class="empty-state" style="padding:4px;width:100%"><div class="empty-text" style="font-size:9px">No data yet</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYERS TAB -->
+  <div class="tab-content" id="tab-players">
+    <div class="p-inner">
+      <div class="plist-panel">
+        <div class="sec-label">All Players</div>
+        <div id="full-player-list"><div class="empty-state" style="padding:16px"><div class="empty-text">No players tracked yet</div></div></div>
+      </div>
+      <div class="pdetail" id="player-detail-panel">
+        <div class="empty-state" style="padding:30px"><div class="empty-icon">👤</div><div class="empty-text">Select a player to view details</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSIS TAB -->
+  <div class="tab-content" id="tab-analysis">
+    <div class="a-inner">
+      <div class="a-panel">
+        <div class="a-box">
+          <div class="a-box-title">Pre-Session Brief</div>
+          <div id="presession-brief"><div class="empty-state" style="padding:8px"><div class="empty-text">Run Full Analysis to generate brief</div></div></div>
+        </div>
+        <div class="a-box">
+          <div class="a-box-title">Carry Heat Map — Top Cards This Session</div>
+          <div id="carry-heatmap"><div class="empty-state" style="padding:8px"><div class="empty-text">Upload CSV or play hands to build heat map</div></div></div>
+        </div>
+      </div>
+      <div class="a-panel">
+        <div class="a-box">
+          <div class="a-box-title">Missed Value (Folded → Went to Showdown)</div>
+          <div id="missed-value-list"><div class="empty-state" style="padding:8px"><div class="empty-text">No showdown data yet</div></div></div>
+        </div>
+        <div class="a-box">
+          <div class="a-box-title">Pot Odds Calculator</div>
+          <div class="pot-odds-display">
+            <div class="pod-stat"><div class="pod-lbl">Bet Facing</div><div class="pod-val" id="poc-bet">—</div></div>
+            <div class="pod-stat"><div class="pod-lbl">Pot Size</div><div class="pod-val" id="poc-pot">—</div></div>
+          </div>
+          <div class="pot-bar"><div class="pot-bar-fill" id="poc-fill" style="width:0%"></div></div>
+          <div class="pot-equity-txt" id="poc-txt">Enter a hand to calculate</div>
+        </div>
+        <div class="a-box">
+          <div class="a-box-title">Full Analysis</div>
+          <div id="full-analysis-result"><div class="empty-state" style="padding:8px"><div class="empty-text">Run analysis to see Claude's full assessment</div></div></div>
+          <button class="tool-btn primary" style="margin-top:8px;width:100%" onclick="runAnalysis()">🔍 Run Full Analysis</button>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- RIGHT: PLAYER HUB -->
-    <div class="panel" id="player-panel">
-      <div class="sec-label">Player HUB <span class="sec-count" id="player-count">0</span></div>
-      <div id="player-list">
-        <div class="empty-state">
-          <div class="empty-icon">👥</div>
-          <div class="empty-text">Players appear after hands are tracked</div>
-        </div>
+  <!-- SETTINGS TAB -->
+  <div class="tab-content" id="tab-settings">
+    <div class="set-inner">
+      <div class="setting-row">
+        <div><div class="setting-lbl">Danger Player Threshold</div><div class="setting-sub">Flag players above this win rate</div></div>
+        <div class="slider-wrap"><input type="range" min="50" max="80" value="60" style="width:90px" id="setting-danger-thresh" oninput="document.getElementById('danger-thresh-val').textContent=this.value+'%'"><div class="slider-val" id="danger-thresh-val">60%</div></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-lbl">Carry Signal Sensitivity</div><div class="setting-sub">How aggressively to weight carry predictions</div></div>
+        <div class="slider-wrap"><input type="range" min="1" max="5" value="3" style="width:90px" id="setting-carry-sens" oninput="document.getElementById('carry-sens-val').textContent=this.value"><div class="slider-val" id="carry-sens-val">3</div></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-lbl">River Overbet Protection</div><div class="setting-sub">Call river overbets vs known aggro players</div></div>
+        <div class="toggle on" id="toggle-overbet" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-lbl">Auto Player Narratives</div><div class="setting-sub">Claude generates analysis at 10/25/50/100 hands</div></div>
+        <div class="toggle on" id="toggle-narratives" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-lbl">Position-Aware Decisions</div><div class="setting-sub">Adjust advice based on seat vs dealer position</div></div>
+        <div class="toggle on" id="toggle-position" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-lbl">Show Hand Strength</div><div class="setting-sub">Display TWO PAIR / FLUSH etc on decision panel</div></div>
+        <div class="toggle on" id="toggle-handstr" onclick="this.classList.toggle('on')"></div>
       </div>
     </div>
+  </div>
 
-  </div><!-- end main-grid -->
-
-  <!-- BOTTOM STRIP -->
+  <!-- BOTTOM STRIP — always visible -->
   <div id="bottom-strip">
-
-    <!-- Narrative Feed -->
     <div class="b-panel">
-      <div class="sec-label" style="padding:10px 14px 6px">Narrative <span class="sec-count">Claude + Mem0</span></div>
-      <div class="b-panel-content">
-        <div id="narrative-list">
-          <div class="empty-state" style="padding:10px"><div class="empty-text">Narratives appear after each hand</div></div>
-        </div>
-      </div>
+      <div class="sec-label" style="padding:8px 12px 6px">Narrative <span class="sec-count">Claude + Mem0</span></div>
+      <div class="b-panel-content"><div id="narrative-list"><div class="empty-state" style="padding:8px"><div class="empty-text">Narratives appear after each hand</div></div></div></div>
     </div>
-
-    <!-- Mem0 -->
     <div class="b-panel">
-      <div class="sec-label" style="padding:10px 14px 6px">Memory <span class="sec-count">Mem0</span></div>
-      <div class="b-panel-content">
-        <div id="mem0-list">
-          <div class="empty-state" style="padding:10px"><div class="empty-text">Memories stored as hands are played</div></div>
-        </div>
-      </div>
+      <div class="sec-label" style="padding:8px 12px 6px">Memory <span class="sec-count">Mem0</span></div>
+      <div class="b-panel-content"><div id="mem0-list"><div class="empty-state" style="padding:8px"><div class="empty-text">Memories stored as hands are played</div></div></div></div>
     </div>
-
-    <!-- Knowledge -->
     <div class="b-panel">
-      <div class="sec-label" style="padding:10px 14px 6px">Knowledge Loop</div>
-      <div class="b-panel-content">
-        <div id="knowledge-list">
-          <div class="empty-state" style="padding:10px"><div class="empty-text">Waiting for first hand…</div></div>
-        </div>
-      </div>
+      <div class="sec-label" style="padding:8px 12px 6px">Knowledge Loop</div>
+      <div class="b-panel-content"><div id="knowledge-list"><div class="empty-state" style="padding:8px"><div class="empty-text">Waiting for first hand…</div></div></div></div>
     </div>
-
-    <!-- Tools -->
     <div id="tools-panel">
-      <div class="sec-label" style="padding:0 0 6px;border-bottom:1px solid var(--border)">Tools</div>
-      <div id="upload-zone" onclick="document.getElementById('upload-input').click()" style="margin-top:6px">
+      <div class="sec-label" style="padding:0 0 5px;border-bottom:1px solid var(--border);font-size:10px">Tools</div>
+      <div id="upload-zone" onclick="document.getElementById('upload-input').click()" style="margin-top:5px">
         <span class="uz-icon">📂</span>
         <div class="uz-text">Upload PokerNow CSV</div>
         <div class="uz-sub">Seeds model + Mem0</div>
@@ -671,10 +562,9 @@ html, body {
       <button class="tool-btn primary" onclick="runAnalysis()">🔍 Full Analysis</button>
       <button class="tool-btn" onclick="loadNarratives()">🧠 Refresh</button>
     </div>
+  </div>
 
-  </div><!-- end bottom-strip -->
-
-</div><!-- end app -->
+</div>
 
 <!-- PLAYER MODAL -->
 <div id="player-modal">
@@ -705,39 +595,45 @@ html, body {
 </div>
 
 </body>
-
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────────────────
-const SERVER = (new URLSearchParams(window.location.search).get('server'))
-               || 'https://poker-agent-production.up.railway.app';
+const SERVER = (new URLSearchParams(window.location.search).get('server')) || 'https://poker-agent-production.up.railway.app';
 const WS_URL = SERVER.replace('https://','wss://').replace('http://','ws://');
-
-// SESSION and GAME_ID are set after fetching /active
-let SESSION  = new URLSearchParams(window.location.search).get('session') || '';
+let SESSION = new URLSearchParams(window.location.search).get('session') || '';
 let GAME_ID  = new URLSearchParams(window.location.search).get('game_id') || '';
 
+// ── TAB SWITCHING ──────────────────────────────────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+  if (id === 'session')  refreshSessionTab();
+  if (id === 'players')  refreshPlayersTab();
+  if (id === 'analysis') refreshAnalysisTab();
+}
+
+// ── STATE ──────────────────────────────────────────────────────────────────────
+let state = {
+  raw: null, narratives: [], handHistory: [], mem0List: [],
+  playerStats: {}, sessionHands: [], stackHistory: [],
+};
+
+// ── SESSION INIT ───────────────────────────────────────────────────────────────
 async function initSession() {
-  // If game_id passed directly in URL — use immediately, no polling needed
   if (GAME_ID && GAME_ID !== 'unknown') {
     SESSION = GAME_ID;
     document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
-    connectWS();
-    loadInitialState();
-    loadNarratives();
+    connectWS(); loadInitialState(); loadNarratives();
     setTimeout(loadPlayerStats, 2000);
     setTimeout(loadMem0, 3000);
     return;
   }
-  // Fallback: check SESSION param
   if (SESSION && SESSION !== 'unknown') {
     GAME_ID = SESSION;
     document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
-    connectWS();
-    loadInitialState();
-    loadNarratives();
+    connectWS(); loadInitialState(); loadNarratives();
     return;
   }
-  // Ask server what game is active — retry up to 10 times (extension may not have sent /raw yet)
   let attempts = 0;
   const tryFetch = async () => {
     attempts++;
@@ -745,97 +641,48 @@ async function initSession() {
       const r = await fetch(`${SERVER}/active`);
       const d = await r.json();
       if (d.ok && d.game_id) {
-        SESSION = d.game_id;
-        GAME_ID = d.game_id;
+        SESSION = d.game_id; GAME_ID = d.game_id;
         document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
-        connectWS();
-        loadInitialState();
-        loadNarratives();
+        connectWS(); loadInitialState(); loadNarratives();
         setTimeout(loadPlayerStats, 2000);
-        setTimeout(loadMem0, 3000);  // load Mem0 entries after connect
+        setTimeout(loadMem0, 3000);
         return;
       }
     } catch(e) {}
-    // Not ready yet — retry indefinitely every 2s for first 30s, then every 5s
     const delay = attempts < 15 ? 2000 : 5000;
     setTimeout(tryFetch, delay);
   };
   tryFetch();
 }
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let state = {
-  raw:         null,
-  narratives:  [],
-  handHistory: [],
-  mem0List:    [],
-  playerStats: {},
-};
-
-// ── WEBSOCKET ─────────────────────────────────────────────────────────────────
-let ws = null;
-let wsRetry = 0;
-
+// ── WEBSOCKET ──────────────────────────────────────────────────────────────────
+let ws = null, wsRetry = 0;
 function connectWS() {
   const url = `${WS_URL}/ws/${SESSION}`;
-  try {
-    ws = new WebSocket(url);
-  } catch(e) {
-    scheduleReconnect();
-    return;
-  }
-
-  ws.onopen = () => {
-    wsRetry = 0;
-    setStatus('ws-status', 'WS LIVE', 'ok');
-  };
-
+  try { ws = new WebSocket(url); } catch(e) { scheduleReconnect(); return; }
+  ws.onopen = () => { wsRetry = 0; setStatus('ws-status','WS LIVE','ok'); };
   ws.onmessage = (evt) => {
     try {
       const msg = JSON.parse(evt.data);
-
       if (msg.type === 'status') {
-        // Immediate status on WS connect — no need to wait for /raw
-        setStatus('mem0-status',   msg.data.mem0_live   ? 'MEM0 ✓'   : 'MEM0 ✗',   msg.data.mem0_live   ? 'ok' : 'err');
+        setStatus('mem0-status', msg.data.mem0_live ? 'MEMO ✓' : 'MEMO ✗', msg.data.mem0_live ? 'ok' : 'err');
         setStatus('claude-status', msg.data.claude_live ? 'CLAUDE ✓' : 'CLAUDE ✗', msg.data.claude_live ? 'ok' : 'err');
-
       } else if (msg.type === 'raw') {
         state.raw = msg.data;
         renderAll();
-
-      } else if (msg.type === 'player_narrative') {
-          handlePlayerNarrative(msg.data || msg);
+        trackSessionHand(msg.data);
       } else if (msg.type === 'weight_updates') {
-          // weight_updates applied in-memory only — server is source of truth
-        // Letta/Claude returned weight_updates — patch onto local model
-        // These affect next hand's getAdvice() decisions:
-        // carryBoost → boosts carry signal
-        // jeezyWarning → downgrades marginal bets to check postflop
-        // allinWarning → adds warning reason
-        // hotCards → merged into predicted cards (effectiveConnecting)
         const wu = msg.data;
-        if (state.raw) {
-          if (!state.raw.model_patch) state.raw.model_patch = {};
-          Object.assign(state.raw.model_patch, wu.weight_updates || {});
-        }
-        // Store weight_updates for Knowledge panel
+        if (state.raw) { if (!state.raw.model_patch) state.raw.model_patch = {}; Object.assign(state.raw.model_patch, wu.weight_updates || {}); }
         state.lastWeightUpdate = wu;
-        // Add to narrative feed
         if (wu.next_hand) {
-          state.narratives.unshift({
-            hand_num: wu.hand_num,
-            next_hand: wu.next_hand,
-            ts: new Date().toLocaleTimeString(),
-            weight_updates: wu.weight_updates,
-            carry_rate: wu.carry_rate,
-            live_wr: wu.live_wr,
-            danger_players: wu.danger_players,
-          });
+          state.narratives.unshift({ hand_num: wu.hand_num, next_hand: wu.next_hand, ts: new Date().toLocaleTimeString(), weight_updates: wu.weight_updates, carry_rate: wu.carry_rate, live_wr: wu.live_wr, danger_players: wu.danger_players, engine_action: state.raw?.decision?.action || '—' });
           if (state.narratives.length > 50) state.narratives.pop();
-          renderNarratives();
-          renderKnowledge();
+          renderNarratives(); renderKnowledge();
         }
-
+        updatePotOddsFromRaw();
+      } else if (msg.type === 'player_narrative') {
+        handlePlayerNarrative(msg.data || msg);
       } else if (msg.type === 'narrative') {
         state.narratives.unshift(msg.data);
         if (state.narratives.length > 50) state.narratives.pop();
@@ -843,24 +690,16 @@ function connectWS() {
       }
     } catch(e) {}
   };
-
-  ws.onclose = () => {
-    setStatus('ws-status', 'WS LOST', 'err');
-    scheduleReconnect();
-  };
-
-  ws.onerror = () => {
-    setStatus('ws-status', 'WS ERR', 'err');
-  };
+  ws.onclose = () => { setStatus('ws-status','WS LOST','err'); scheduleReconnect(); };
+  ws.onerror = () => { setStatus('ws-status','WS ERR','err'); };
 }
-
 function scheduleReconnect() {
   const delay = Math.min(1000 * Math.pow(2, wsRetry), 10000);
   wsRetry++;
   setTimeout(connectWS, delay);
 }
 
-// ── STATUS HELPERS ────────────────────────────────────────────────────────────
+// ── STATUS ─────────────────────────────────────────────────────────────────────
 function setStatus(id, text, cls) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -868,57 +707,49 @@ function setStatus(id, text, cls) {
   el.className = 's-indicator ' + cls;
 }
 
-// ── CARD HTML ─────────────────────────────────────────────────────────────────
+// ── CARD HTML ──────────────────────────────────────────────────────────────────
 function cardHTML(cardStr, type, connecting) {
   if (!cardStr) return '';
   const suit = cardStr.slice(-1);
   const rank = cardStr.slice(0,-1);
-  const suitClass = suit === '♥' ? 'hearts' : suit === '♦' ? 'diamonds' : suit === '♠' ? 'spades' : 'clubs';
-  const cls  = [type, suitClass, connecting ? 'connecting' : ''].filter(Boolean).join(' ');
+  const suitClass = suit==='♥'?'hearts':suit==='♦'?'diamonds':suit==='♠'?'spades':'clubs';
+  const cls = [type, suitClass, connecting?'connecting':''].filter(Boolean).join(' ');
   const star = connecting ? '<span class="connect-star">★</span>' : '';
   return `<div class="card ${cls}">${star}<div class="rank">${rank}</div><div class="suit">${suit}</div></div>`;
 }
-
 function predCardHTML(cardStr, connecting) {
   if (!cardStr) return '';
   const suit = cardStr.slice(-1);
   const rank = cardStr.slice(0,-1);
-  const suitClass = suit === '♥' ? 'hearts' : suit === '♦' ? 'diamonds' : suit === '♠' ? 'spades' : 'clubs';
-  const cls  = [suitClass, connecting ? 'connecting' : ''].filter(Boolean).join(' ');
+  const suitClass = suit==='♥'?'hearts':suit==='♦'?'diamonds':suit==='♠'?'spades':'clubs';
+  const cls = [suitClass, connecting?'connecting':''].filter(Boolean).join(' ');
   return `<div class="pred-card ${cls}"><div class="rank">${rank}</div><div class="suit">${suit}</div></div>`;
 }
 
-// ── RENDER ALL ────────────────────────────────────────────────────────────────
+// ── RENDER ALL ─────────────────────────────────────────────────────────────────
 function renderAll() {
   const d = state.raw;
   if (!d) return;
-
-  renderDecision(d);
-  renderCards(d);
-  renderCarryAlert(d);
-  renderPredicted(d);
-  renderPlayerHub(d);
-  renderHandHistory();
-  updateServerStatus(d);
+  renderDecision(d); renderCards(d); renderCarryAlert(d);
+  renderPredicted(d); renderPlayerHub(d); renderHandHistory();
+  updateServerStatus(d); updatePotOddsFromRaw();
 }
 
-// ── DECISION ──────────────────────────────────────────────────────────────────
+// ── DECISION ───────────────────────────────────────────────────────────────────
 function renderDecision(d) {
   const dec = d.decision;
-  const box   = document.getElementById('action-display');
+  const box = document.getElementById('action-display');
   const emoji = document.getElementById('action-emoji');
-  const text  = document.getElementById('action-text');
+  const text = document.getElementById('action-text');
   const sizing = document.getElementById('action-sizing');
 
-  // No model loaded — show upload prompt
   if (!d.model_ready && (!dec || !dec.action)) {
     box.className = 'check';
     emoji.textContent = '📂';
-    text.textContent  = 'UPLOAD CSV';
+    text.textContent = 'UPLOAD CSV';
     sizing.textContent = 'Open dashboard tools panel to seed model';
     return;
   }
-
   if (!dec || !dec.action) return;
 
   const vc = (dec.vClass || 'check').toLowerCase();
@@ -934,10 +765,9 @@ function renderDecision(d) {
       text.classList.add('action-snap');
     });
   }
-  text.textContent  = dec.action || '—';
+  text.textContent = dec.action || '—';
   sizing.textContent = dec.sizing ? dec.sizing : '';
 
-  // Hand strength display
   const hsEl = document.getElementById('hand-strength');
   if (hsEl) {
     const hn = dec.handName || '';
@@ -946,117 +776,81 @@ function renderDecision(d) {
     hsEl.className = hs >= 5 ? 'strong' : hs >= 2 ? 'made' : hs >= 1 ? 'draw' : 'nothing';
   }
 
-  // Hero turn banner
   const banner = document.getElementById('your-turn-banner');
   const decPanel = document.getElementById('decision-panel');
-  if (d.is_hero_turn) {
-    banner.classList.add('show');
-    decPanel.classList.add('your-turn');
-  } else {
-    banner.classList.remove('show');
-    decPanel.classList.remove('your-turn');
-  }
+  if (d.is_hero_turn) { banner.classList.add('show'); decPanel.classList.add('your-turn'); }
+  else { banner.classList.remove('show'); decPanel.classList.remove('your-turn'); }
 
-  // Flush danger banner
   const flushBanner = document.getElementById('flush-banner');
-  if (dec.flushWarning) {
-    flushBanner.textContent = dec.flushWarning;
-    flushBanner.classList.add('active');
-  } else {
-    flushBanner.classList.remove('active');
-  }
+  if (dec.flushWarning) { flushBanner.textContent = dec.flushWarning; flushBanner.classList.add('active'); }
+  else { flushBanner.classList.remove('active'); }
 
-  // Bet context
   const ctxBox = document.getElementById('bet-context-box');
   if (d.bet_facing > 0) {
     ctxBox.style.display = 'block';
     document.getElementById('bc-aggressor').textContent = d.aggressor || '—';
     document.getElementById('bc-their-bet').textContent = d.max_opp_bet || '—';
-    document.getElementById('bc-your-bet').textContent  = d.hero_bet || '0';
-    document.getElementById('bc-call').textContent      = d.call_amount || d.bet_facing || '—';
-    document.getElementById('bc-pot').textContent       = d.pot_size || '—';
-    const equity = d.call_amount && d.pot_size
-      ? Math.round(d.call_amount / (d.pot_size + d.call_amount) * 100) : 0;
+    document.getElementById('bc-your-bet').textContent = d.hero_bet || '0';
+    document.getElementById('bc-call').textContent = d.call_amount || d.bet_facing || '—';
+    document.getElementById('bc-pot').textContent = d.pot_size || '—';
+    const equity = d.call_amount && d.pot_size ? Math.round(d.call_amount / (d.pot_size + d.call_amount) * 100) : 0;
     document.getElementById('bc-equity').textContent = equity + '%';
-    document.getElementById('pot-odds-fill').style.width = Math.min(equity, 100) + '%';
-    document.getElementById('pot-odds-fill').style.background =
-      equity > 40 ? 'var(--green)' : equity > 25 ? 'var(--gold)' : 'var(--red)';
-  } else {
-    ctxBox.style.display = 'none';
-  }
+    document.getElementById('pot-odds-fill').style.width = Math.min(equity,100) + '%';
+    document.getElementById('pot-odds-fill').style.background = equity > 40 ? 'var(--green)' : equity > 25 ? 'var(--warning)' : 'var(--red)';
+  } else { ctxBox.style.display = 'none'; }
 
-  // Reasons
   const reasons = dec.reasons || [];
   const rl = document.getElementById('reasons-list');
   if (reasons.length) {
     rl.innerHTML = reasons.map(r => {
-      const isWarn   = r.includes('⚠️') || r.includes('WARNING') || r.includes('DANGER');
+      const isWarn = r.includes('⚠️') || r.includes('WARNING') || r.includes('DANGER');
       const isDanger = r.includes('FOLD') || r.includes('overbet');
       const cls = isDanger ? 'danger' : isWarn ? 'warn' : '';
-      return `<div class="reason-item ${cls}"><span class="ri-dot">•</span><span>${r}</span></div>`;
+      return `<div class="reason-item ${cls}"><span class="ri-dot"></span><span>${r}</span></div>`;
     }).join('');
-  } else {
-    rl.innerHTML = '<div class="empty-state">—</div>';
-  }
+  } else { rl.innerHTML = '<div class="empty-state" style="padding:8px">—</div>'; }
 
-  // Stage pills
   const stage = dec.stage || 'preflop';
   ['preflop','flop','turn','river'].forEach(s => {
     const el = document.getElementById('sp-' + s);
     if (el) el.className = 'stage-pill' + (s === stage ? ' active' : '');
   });
 
-  // Model stats
   const ms = document.getElementById('ms-hands');
   const mc = document.getElementById('ms-carry');
-  if (ms) ms.innerHTML = `<span>${dec.total_hands || d.model_meta?.total_hands || 0}</span> hands`;
-  if (mc) mc.innerHTML = `<span>${dec.carry_rate || d.model_meta?.carry_rate || 0}</span>% carry`;
-
+  if (ms) ms.innerHTML = `<span>${dec.total_hands || d.model_meta?.total_hands || 0}</span>`;
+  if (mc) mc.innerHTML = `<span>${dec.carry_rate || d.model_meta?.carry_rate || 0}</span>`;
   const md = document.getElementById('ms-dealer');
   const mb = document.getElementById('ms-blinds');
-  if (md && d.dealer_pos) md.textContent = 'btn: ' + d.dealer_pos;
+  if (md && d.dealer_pos) md.textContent = d.dealer_pos;
   if (mb && d.blinds && d.blinds.bb) mb.textContent = d.blinds.sb + '/' + d.blinds.bb;
 }
 
-// ── CARDS ─────────────────────────────────────────────────────────────────────
+// ── CARDS ──────────────────────────────────────────────────────────────────────
 function renderCards(d) {
-  const holeCards  = d.hole_cards  || [];
+  const holeCards = d.hole_cards || [];
   const boardCards = d.board_cards || [];
   const dec = d.decision || {};
   const top10 = dec.top10 || [];
-
   const holeSuits = holeCards.map(c => c.slice(-1));
   const holeRanks = holeCards.map(c => c.slice(0,-1));
-
-  const holeEl  = document.getElementById('hole-cards');
+  const holeEl = document.getElementById('hole-cards');
   const boardEl = document.getElementById('board-cards');
-
-  holeEl.innerHTML = holeCards.length
-    ? holeCards.map(c => cardHTML(c, 'hole', false)).join('')
-    : '<span style="color:var(--text-3);font-family:var(--f-mono);font-size:13px">No cards</span>';
-
-  boardEl.innerHTML = boardCards.length
-    ? boardCards.map(c => cardHTML(c, 'board', false)).join('')
-    : '<span style="color:var(--text-3);font-family:var(--f-mono);font-size:13px">Preflop</span>';
+  holeEl.innerHTML = holeCards.length ? holeCards.map(c => cardHTML(c, 'hero', false)).join('') : '<span style="color:var(--t4);font-family:var(--f-mono);font-size:10px">No cards</span>';
+  boardEl.innerHTML = boardCards.length ? boardCards.map(c => cardHTML(c, 'board', false)).join('') : '<span style="color:var(--t4);font-family:var(--f-mono);font-size:10px">PREFLOP</span>';
 }
 
-// ── PREDICTED CARDS ───────────────────────────────────────────────────────────
+// ── PREDICTED ──────────────────────────────────────────────────────────────────
 function renderPredicted(d) {
   const dec = d.decision || {};
-  const top10 = (dec.top10 || []).slice(0, 10);
+  const top10 = (dec.top10 || []).slice(0,10);
   const holeCards = d.hole_cards || [];
   const holeRanks = holeCards.map(c => c.slice(0,-1));
   const holeSuits = holeCards.map(c => c.slice(-1));
-
   const labelEl = document.getElementById('predicted-label');
   if (labelEl && dec.nextLabel) labelEl.textContent = dec.nextLabel;
-
   const el = document.getElementById('predicted-cards');
-  if (!top10.length) {
-    el.innerHTML = '<div class="empty-state">Upload CSV to enable predictions</div>';
-    return;
-  }
-
+  if (!top10.length) { el.innerHTML = '<div class="empty-state" style="padding:6px"><div class="empty-text">Upload CSV to enable predictions</div></div>'; return; }
   el.innerHTML = top10.map(item => {
     const card = item.card || item;
     const suit = card.slice(-1);
@@ -1066,348 +860,167 @@ function renderPredicted(d) {
   }).join('');
 }
 
-// ── CARRY ALERT ───────────────────────────────────────────────────────────────
+// ── CARRY ALERT ────────────────────────────────────────────────────────────────
 function renderCarryAlert(d) {
   const alert = d.carry_alert;
   const section = document.getElementById('carry-section');
-  if (!alert || !alert.topCarry || !alert.topCarry.length) {
-    section.classList.remove('active');
-    return;
-  }
+  if (!alert || !alert.topCarry || !alert.topCarry.length) { section.classList.remove('active'); return; }
   section.classList.add('active');
-
   const boardSet = new Set(d.board_cards || []);
-
-  const cardsEl = document.getElementById('carry-cards');
-  cardsEl.innerHTML = alert.topCarry.map(x => {
+  document.getElementById('carry-cards').innerHTML = alert.topCarry.map(x => {
     const onBoard = boardSet.has(x.card);
     const cls = onBoard ? 'on-board' : x.hotspot ? 'hotspot' : '';
-    return `<div class="carry-card-chip ${cls}">
-      ${x.card}${onBoard?' 🎯':''}${x.hotspot?' 🔥':''}
-      <span class="carry-pct">${x.rate}%</span>
-    </div>`;
+    return `<div class="carry-card-chip ${cls}">${x.card}${onBoard?' 🎯':''}${x.hotspot?' 🔥':''}<span class="carry-pct">${x.rate}%</span></div>`;
   }).join('');
-
-  const flushEl = document.getElementById('carry-flush-warnings');
-  flushEl.innerHTML = (alert.flushSuitAlert || []).map(f => {
+  document.getElementById('carry-flush-warnings').innerHTML = (alert.flushSuitAlert || []).map(f => {
     const hits = f.cards.filter(c => boardSet.has(c)).length;
-    return `<div class="carry-flush-warn">
-      ⚠️ ${f.count} ${f.suit} cards from last hand — flush risk
-      ${hits ? `<b style="color:var(--danger)"> (${hits} on board!)</b>` : ''}
-    </div>`;
+    return `<div style="font-size:10px;color:var(--blue);margin-top:3px">⚠️ ${f.count} ${f.suit} cards from last hand — flush risk${hits ? ` <b style="color:var(--danger)">(${hits} on board!)</b>` : ''}</div>`;
   }).join('');
-
   const hitSummary = alert.topCarry.filter(x => boardSet.has(x.card));
-  const hitEl = document.getElementById('carry-hit-summary');
-  hitEl.innerHTML = hitSummary.length
-    ? `<div class="carry-hit-summary">🎯 ${hitSummary.map(x=>x.card).join(' ')} carried onto board!</div>`
-    : '';
+  document.getElementById('carry-hit-summary').innerHTML = hitSummary.length ? `🎯 ${hitSummary.map(x=>x.card).join(' ')} carried onto board!` : '';
 }
 
-// ── PLAYER HUB ────────────────────────────────────────────────────────────────
+// ── PLAYER HUB ─────────────────────────────────────────────────────────────────
 let currentModalPlayer = null;
-
 function renderPlayerHub(d) {
   const stats = d.player_stats || state.playerStats || {};
   if (Object.keys(stats).length) Object.assign(state.playerStats, stats);
-
   const snap = d.all_players_snap || {};
-
-  // Build player list from snap (everyone at table) + overlay HUD stats where available
-  // snap has live data immediately; stats has historical HUD data after hands played
   const snapNames = Object.keys(snap).filter(n => !snap[n].isHero);
   const statsNames = Object.keys(state.playerStats).filter(n => (state.playerStats[n].handsTracked||0) >= 1);
   const allNames = [...new Set([...snapNames, ...statsNames])];
-
   const players = allNames.map(name => {
     const s = state.playerStats[name] || {};
-    const snapData = snap[name] || {};
-    return [name, { ...s, _snap: snapData }];
+    return [name, { ...s, _snap: snap[name] || {} }];
   }).sort((a,b) => (b[1].handsTracked||0) - (a[1].handsTracked||0));
-
   const countEl = document.getElementById('player-count');
   if (countEl) countEl.textContent = players.length;
   if (!players.length) return;
-
   const el = document.getElementById('player-list');
-
   el.innerHTML = players.map(([name, s]) => {
     const isDanger = s.isDanger || (s.winRate >= 60 && (s.handsTracked||0) >= 5);
     const isFeeder = !isDanger && s.winRate < 35 && (s.handsTracked||0) >= 5;
-    const entryCls = isDanger ? 'danger' : isFeeder ? 'feeder' : '';
-    const tag      = isDanger ? '<span class="p-tag danger">⚠ DANGER</span>' :
-                     isFeeder ? '<span class="p-tag feeder">↗ FEEDER</span>' : '';
-
-    const vpip = s.vpip || 0;
-    const pfr  = s.pfr  || 0;
-    const af   = (s.af  || 0).toFixed(1);
-    const wr   = s.winRate || 0;
-
-    const vpip3bet = s.threeBet || 0;
-    const wtsd     = s.wtsd     || 0;
-    const wsd      = s.wsd      || 0;
-
-    const wrColor  = wr >= 60 ? 'danger' : wr < 35 ? 'good' : '';
-    const afColor  = s.af > 3 ? 'warn' : s.af < 1.5 ? '' : '';
-    const fillColor = isDanger ? 'var(--danger)' : isFeeder ? 'var(--info)' : 'var(--accent)';
-    const short     = name.length > 13 ? name.slice(0,13)+'…' : name;
-
-    // Live stack from DOM snap
+    const entryCls = isDanger ? 'danger' : isFeeder ? 'feeder' : 'neutral';
+    const tag = isDanger ? '<span class="p-tag danger">⚠ DANGER</span>' : isFeeder ? '<span class="p-tag feeder">↗ FEEDER</span>' : '';
+    const vpip = s.vpip || 0; const pfr = s.pfr || 0;
+    const af = (s.af || 0).toFixed(1); const wr = s.winRate || 0;
     const snapData = s._snap || {};
-    const stackLine = snapData.stack ? `<span>Stack: ${snapData.stack}</span>` : '';
-    const lastHand  = snapData.handMessage ? `<span>${snapData.handMessage}</span>` : '';
-
+    const stackLine = snapData.stack ? `Stack: ${snapData.stack}` : '';
+    const short = name.length > 13 ? name.slice(0,13)+'…' : name;
+    const wrColor = wr >= 60 ? 'danger' : wr < 35 ? 'good' : '';
+    const fillColor = isDanger ? 'var(--danger)' : isFeeder ? 'var(--info)' : 'var(--accent)';
+    const hasStats = (s.handsTracked||0) >= 1;
     return `<div class="player-card ${entryCls}">
-      <div class="p-name-row">
-        <span class="p-name">${short}</span>
-        ${tag}
-      </div>
-      <div class="hud-big4">
+      <div class="p-name-row"><span class="p-name">${short}</span>${tag}</div>
+      ${hasStats ? `<div class="hud-big4">
         <div class="hud-stat"><div class="hud-val">${vpip}%</div><div class="hud-lbl">VPIP</div></div>
         <div class="hud-stat"><div class="hud-val">${pfr}%</div><div class="hud-lbl">PFR</div></div>
-        <div class="hud-stat"><div class="hud-val ${afColor}">${af}</div><div class="hud-lbl">AF</div></div>
+        <div class="hud-stat"><div class="hud-val ${af>3?'warn':''}">${af}</div><div class="hud-lbl">AF</div></div>
         <div class="hud-stat"><div class="hud-val ${wrColor}">${wr}%</div><div class="hud-lbl">WIN</div></div>
       </div>
       <div class="winrate-bar"><div class="winrate-fill" style="width:${Math.min(wr,100)}%;background:${fillColor}"></div></div>
       <div class="hud-preflop">
-        <div class="hud-pf-stat"><div class="hud-pf-val">${vpip3bet}%</div><div class="hud-pf-lbl">3Bet</div></div>
-        <div class="hud-pf-stat"><div class="hud-pf-val">${wtsd}%</div><div class="hud-pf-lbl">WTSD</div></div>
-        <div class="hud-pf-stat"><div class="hud-pf-val">${wsd}%</div><div class="hud-pf-lbl">W$SD</div></div>
-      </div>
+        <div class="hud-pf-stat"><div class="hud-pf-val">${s.threeBet||0}%</div><div class="hud-pf-lbl">3Bet</div></div>
+        <div class="hud-pf-stat"><div class="hud-pf-val">${s.wtsd||0}%</div><div class="hud-pf-lbl">WTSD</div></div>
+        <div class="hud-pf-stat"><div class="hud-pf-val">${s.wsd||0}%</div><div class="hud-pf-lbl">W$SD</div></div>
+      </div>` : `<div style="font-size:10px;color:var(--t3);font-family:var(--f-mono);padding:3px 0">${stackLine || 'New player'}</div>`}
       <div class="p-bottom">
-        <span class="p-sample">${s.handsTracked||0}h ${lastHand || stackLine}</span>
+        <span class="p-sample">${s.handsTracked||0}h ${stackLine&&hasStats?stackLine:''}</span>
         <button class="claude-btn" onclick="openPlayerModal('${name.replace(/'/g,"\\'")}')">🧠 Claude</button>
       </div>
     </div>`;
   }).join('');
+
+  // Update danger badge on players tab
+  const dangerCount = players.filter(([,s]) => s.isDanger||(s.winRate>=60&&(s.handsTracked||0)>=5)).length;
+  const pTabBtn = document.getElementById('players-tab-btn');
+  if (pTabBtn) pTabBtn.innerHTML = dangerCount > 0 ? `PLAYERS <span class="rbadge">${dangerCount}</span>` : 'PLAYERS';
 }
 
-function openPlayerModal(playerName) {
-  currentModalPlayer = playerName;
-  const s = state.playerStats[playerName];
-  if (!s) return;
-
-  document.getElementById('modal-player-name').textContent = playerName;
-  document.getElementById('player-modal').classList.add('open');
-
-  // Profile label
-  const vpip = s.vpip || 0;
-  const pfr  = s.pfr  || 0;
-  let profile = vpip > 40 ? 'Loose (Fish/Recreational)' :
-                vpip < 15 ? 'Nit (Very Tight)' :
-                pfr > vpip * 0.75 ? 'Tight-Aggressive (TAG)' : 'Loose-Aggressive (LAG)';
-  document.getElementById('modal-profile').textContent = profile;
-
-  // Big Four
-  const big4El = document.getElementById('modal-big4');
-  const af = (s.af||0).toFixed(2);
-  big4El.innerHTML = [
-    { val: vpip+'%', lbl: 'VPIP', cls: vpip>40?'warn':'' },
-    { val: pfr+'%',  lbl: 'PFR',  cls: '' },
-    { val: af,       lbl: 'AF',   cls: s.af>3?'warn':s.af<1.5?'good':'' },
-    { val: (s.winRate||0)+'%', lbl: 'WIN%', cls: (s.winRate||0)>=60?'danger':(s.winRate||0)<35?'good':'' },
-  ].map(x => `<div class="modal-stat-box"><div class="modal-stat-val ${x.cls}">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
-
-  // Pre-flop
-  const pfEl = document.getElementById('modal-preflop');
-  pfEl.innerHTML = [
-    { val: (s.threeBet||0)+'%',      lbl: '3Bet%' },
-    { val: (s.ats_pct||s.ats||0)+'%', lbl: 'ATS%' },
-    { val: (s.fold_to_3b_pct||0)+'%', lbl: 'Fold to 3B' },
-    { val: (s.allinCount && s.handsTracked ? Math.round(s.allinCount/s.handsTracked*100) : s.allin_pct||0)+'%', lbl: 'All-in%' },
-  ].map(x => `<div class="modal-stat-box"><div class="modal-stat-val">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
-
-  // Post-flop
-  const postEl = document.getElementById('modal-postflop');
-  postEl.innerHTML = [
-    { val: (s.wtsd||s.wtsd_pct||0)+'%',       lbl: 'WTSD%' },
-    { val: (s.wsd||s.wsd_pct||0)+'%',         lbl: 'W$SD%' },
-    { val: (s.cbet_pct||0)+'%',               lbl: 'CBet%' },
-    { val: (s.fold_to_cbet_pct||0)+'%',       lbl: 'Fold to CB' },
-  ].map(x => `<div class="modal-stat-box"><div class="modal-stat-val">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
-
-  // Reset narrative
-  const narEl = document.getElementById('modal-narrative');
-  narEl.className = 'loading';
-  narEl.textContent = 'Click "Ask Claude" to generate narrative…';
-}
-
-function closePlayerModal() {
-  document.getElementById('player-modal').classList.remove('open');
-  currentModalPlayer = null;
-}
-
-async function askClaudeForPlayer() {
-  if (!currentModalPlayer) return;
-  const btn   = document.getElementById('modal-claude-btn');
-  const narEl = document.getElementById('modal-narrative');
-  btn.textContent = '⏳ Analyzing…';
-  btn.disabled    = true;
-  narEl.className = 'loading';
-  narEl.textContent = 'Claude is analyzing this player…';
-
-  try {
-    const gameId = new URLSearchParams(window.location.search).get('game_id') || SESSION;
-    const r = await fetch(`${SERVER}/player_narrative`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ game_id: gameId, player_name: currentModalPlayer })
-    });
-    const data = await r.json();
-    if (data.ok) {
-      narEl.className = '';
-      narEl.textContent = data.commentary;
-    } else {
-      narEl.textContent = 'Error: ' + (data.error || 'unknown');
-    }
-  } catch(e) {
-    narEl.textContent = 'Error: ' + e.message;
-  }
-  btn.textContent = '🧠 Ask Claude';
-  btn.disabled    = false;
-}
-
-// ── HAND HISTORY ──────────────────────────────────────────────────────────────
+// ── HAND HISTORY ───────────────────────────────────────────────────────────────
 function renderHandHistory() {
   const el = document.getElementById('hand-history-list');
-  if (!state.handHistory.length) {
-    el.innerHTML = '<div class="empty-state">No hands yet</div>';
-    return;
-  }
-
+  if (!state.handHistory.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No hands yet</div></div>'; return; }
   el.innerHTML = [...state.handHistory].reverse().map(h => {
-    const resCls = h.result === 'WON' ? 'won' : h.result === 'FOLDED' ? 'folded' : 'lost';
-    const noteHTML = h.pending
-      ? '<div class="hand-note pending">⏳ analyzing…</div>'
-      : h.note
-        ? `<div class="hand-note">${h.note}</div>`
-        : '';
-    return `<div class="hand-entry">
-      <div class="hand-num">#${h.hand_num}</div>
-      <div class="hand-result ${resCls}">${h.result}</div>
-      <div>
-        <div class="hand-cards">${h.hole} · ${h.board || 'no board'}</div>
-        ${noteHTML}
-      </div>
-    </div>`;
+    const resCls = h.result==='WON'?'won':h.result==='FOLDED'?'folded':'lost';
+    const noteHTML = h.pending ? '<div class="hand-pending">⏳ analyzing…</div>' : h.note ? `<div class="hand-note">${h.note}</div>` : '';
+    return `<div class="hand-entry"><div class="hand-num">#${h.hand_num}</div><div class="hand-result ${resCls}">${h.result}</div><div><div class="hand-cards">${h.hole} · ${h.board||'no board'}</div>${noteHTML}</div></div>`;
   }).join('');
 }
 
-// ── NARRATIVES ────────────────────────────────────────────────────────────────
+// ── NARRATIVES ─────────────────────────────────────────────────────────────────
 function renderNarratives() {
   const el = document.getElementById('narrative-list');
-  if (!state.narratives.length) {
-    el.innerHTML = '<div class="empty-state">No narratives yet — play hands to seed</div>';
-    return;
-  }
+  if (!state.narratives.length) { el.innerHTML = '<div class="empty-state" style="padding:8px"><div class="empty-text">No narratives yet — play hands to seed</div></div>'; return; }
   el.innerHTML = state.narratives.slice(0,30).map(n => {
     const wu = n.weight_updates || {};
     const tags = [];
-    if (wu.carryBoost > 0)   tags.push(`<span style="color:var(--warning);font-size:13px">⚡ carry+${wu.carryBoost.toFixed(1)}</span>`);
-    if (wu.jeezyWarning)     tags.push(`<span style="color:var(--danger);font-size:13px">⚠ DANGER</span>`);
-    if (wu.allinWarning)     tags.push(`<span style="color:var(--danger);font-size:13px">🚨 ALL-IN</span>`);
-    if (wu.hotCards?.length) tags.push(`<span style="color:var(--accent);font-size:13px">🔥 ${wu.hotCards.join(' ')}</span>`);
-    const statsLine = (n.live_wr || n.carry_rate)
-      ? `<div style="font-size:13px;color:var(--text-3);margin-top:2px">WR: ${n.live_wr||'—'}% · Carry: ${n.carry_rate||'—'}%</div>`
-      : '';
-    return `<div class="narrative-entry">
-      <div class="narrative-meta">Hand #${n.hand_num||'?'} · ${n.ts||''} ${tags.join(' ')}</div>
-      <div class="narrative-text">${n.next_hand || n.text || ''}</div>
-      ${statsLine}
-    </div>`;
+    if (wu.carryBoost>0) tags.push(`⚡ carry+${wu.carryBoost.toFixed(1)}`);
+    if (wu.jeezyWarning) tags.push('⚠ DANGER');
+    if (wu.allinWarning) tags.push('🚨 ALL-IN');
+    if (wu.hotCards?.length) tags.push(`🔥 ${wu.hotCards.join(' ')}`);
+    const statsLine = (n.live_wr||n.carry_rate) ? `<div style="font-size:10px;color:var(--t3);margin-top:2px">WR: ${n.live_wr||'—'}% · Carry: ${n.carry_rate||'—'}%</div>` : '';
+    return `<div class="narrative-entry"><div class="narrative-meta">Hand #${n.hand_num||'?'} · ${n.ts||''} ${tags.join(' ')}</div><div class="narrative-text">${n.next_hand||n.text||''}</div>${statsLine}</div>`;
   }).join('');
 }
 
-// ── KNOWLEDGE PANEL ───────────────────────────────────────────────────────────
+// ── KNOWLEDGE LOOP ─────────────────────────────────────────────────────────────
 function renderKnowledge() {
   const el = document.getElementById('knowledge-list');
   if (!el) return;
-
-  const wu         = state.lastWeightUpdate || {};
-  const patch      = state.raw?.model_patch || {};
-  const narratives = state.narratives || [];
-  const players    = state.playerStats || {};
-  const dangerList = Object.entries(players).filter(([,s]) => s.isDanger).map(([n]) => n);
-  const feederList = Object.entries(players).filter(([,s]) => s.isFeeder).map(([n]) => n);
-
+  const wu = state.lastWeightUpdate || {};
+  const patch = state.raw?.model_patch || {};
+  const dangerList = Object.entries(state.playerStats).filter(([,s])=>s.isDanger).map(([n])=>n);
   const rows = [
-    ['carryBoost',    (patch.carryBoost||0).toFixed(1),         (patch.carryBoost||0)>0 ? 'gold' : ''],
-    ['dangerWarning', patch.jeezyWarning ? 'ACTIVE' : 'false',  patch.jeezyWarning ? 'danger' : ''],
-    ['allinWarning',  patch.allinWarning ? 'ACTIVE' : 'false',  patch.allinWarning ? 'danger' : ''],
-    ['hotCards',      (patch.hotCards||[]).join(' ')||'—',       (patch.hotCards||[]).length ? 'gold' : ''],
-    ['live WR',       (wu.live_wr||'—')+'%',                    'green'],
-    ['carry rate',    (wu.carry_rate||'—')+'%',                 (wu.carry_rate||0)>35 ? 'gold' : ''],
-    ['danger',        dangerList.join(', ')||'none',             dangerList.length ? 'danger' : ''],
-    ['narratives',    narratives.length+'',                      'green'],
+    ['carryBoost', (patch.carryBoost||0).toFixed(1), (patch.carryBoost||0)>0?'gold':''],
+    ['dangerWarning', patch.jeezyWarning?'ACTIVE':'false', patch.jeezyWarning?'danger':''],
+    ['allinWarning', patch.allinWarning?'ACTIVE':'false', patch.allinWarning?'danger':''],
+    ['hotCards', (patch.hotCards||[]).join(' ')||'—', (patch.hotCards||[]).length?'gold':''],
+    ['live WR', (wu.live_wr||'—')+'%', 'green'],
+    ['carry rate', (wu.carry_rate||'—')+'%', (wu.carry_rate||0)>35?'gold':''],
+    ['danger', dangerList.join(', ')||'none', dangerList.length?'danger':''],
+    ['narratives', state.narratives.length+'', 'green'],
   ];
-
-  let html = rows.map(([k,v,cls]) => `<div class="know-row"><span class="know-k">${k}</span><span class="know-v ${cls}">${v}</span></div>`).join('');
-
-  if (wu.next_hand) {
-    html += `<div style="margin-top:8px;padding:8px;border-radius:4px;background:var(--gold-dim);border:1px solid rgba(245,166,35,0.15);font-size:10px;color:var(--gold);line-height:1.5">${wu.next_hand}</div>`;
-  }
-
-  el.innerHTML = html || '<div class="empty-state" style="padding:10px"><div class="empty-text">Waiting for first hand…</div></div>';
-  return;
+  let html = rows.map(([k,v,cls])=>`<div class="know-row"><span class="know-k">${k}</span><span class="know-v ${cls}">${v}</span></div>`).join('');
+  if (wu.next_hand) html += `<div style="margin-top:6px;padding:7px 8px;border-radius:4px;background:rgba(227,179,65,0.08);border:1px solid rgba(227,179,65,0.15);font-size:10px;color:var(--warning);line-height:1.5">${wu.next_hand}</div>`;
+  el.innerHTML = html || '<div class="empty-state" style="padding:8px"><div class="empty-text">Waiting for first hand…</div></div>';
 }
 
-// ── MEM0 PANEL ────────────────────────────────────────────────────────────────
+// ── MEM0 ───────────────────────────────────────────────────────────────────────
 function renderMem0(entries) {
   const el = document.getElementById('mem0-list');
-  if (!entries || !entries.length) {
-    el.innerHTML = '<div class="empty-state">No memories yet</div>';
-    return;
-  }
-  el.innerHTML = entries.slice(0,20).map(m => `
-    <div class="narrative-entry">
-      <div class="narrative-meta">Hand #${m.hand_num || '?'} · ${m.ts || ''}</div>
-      <div class="narrative-text" style="color:var(--accent)">${(m.memory_text || m.memory || '').slice(0,200)}</div>
-    </div>
-  `).join('');
+  if (!entries || !entries.length) { el.innerHTML = '<div class="empty-state" style="padding:8px"><div class="empty-text">No memories yet</div></div>'; return; }
+  el.innerHTML = entries.slice(0,20).map(m=>`<div class="narrative-entry"><div class="narrative-meta">Hand #${m.hand_num||'?'} · ${m.ts||''}</div><div class="narrative-text">${(m.memory_text||m.memory||'').slice(0,200)}</div></div>`).join('');
 }
 
-// ── SERVER STATUS ─────────────────────────────────────────────────────────────
+// ── SERVER STATUS ──────────────────────────────────────────────────────────────
 function updateServerStatus(d) {
   if (d.server_status) {
     const s = d.server_status;
-    setStatus('mem0-status', s.mem0_live ? 'MEM0 ✓' : 'MEM0 ✗', s.mem0_live ? 'ok' : 'err');
-    setStatus('claude-status', s.claude_live ? 'CLAUDE ✓' : 'CLAUDE ✗', s.claude_live ? 'ok' : 'err');
-    setStatus('hands-status', (s.hands_logged || 0) + ' HANDS', 'ok');
+    setStatus('mem0-status', s.mem0_live?'MEMO ✓':'MEMO ✗', s.mem0_live?'ok':'err');
+    setStatus('claude-status', s.claude_live?'CLAUDE ✓':'CLAUDE ✗', s.claude_live?'ok':'err');
+    setStatus('hands-status', (s.hands_logged||0)+' HANDS', 'ok');
   }
 }
 
-// ── LOAD INITIAL STATE ────────────────────────────────────────────────────────
+// ── LOAD INITIAL STATE ─────────────────────────────────────────────────────────
 async function loadInitialState() {
   try {
     const r = await fetch(`${SERVER}/api/state/${SESSION}`);
     if (!r.ok) return;
     const data = await r.json();
-    if (data.narratives) {
-      state.narratives = data.narratives;
-      renderNarratives();
-    }
-    if (data.hand_history) {
-      state.handHistory = data.hand_history;
-      renderHandHistory();
-    }
-    if (data.player_stats) {
-      state.playerStats = data.player_stats;
-    }
-    if (data.server_status) {
-      updateServerStatus({ server_status: data.server_status });
-    }
+    if (data.narratives) { state.narratives = data.narratives; renderNarratives(); }
+    if (data.hand_history) { state.handHistory = data.hand_history; renderHandHistory(); }
+    if (data.player_stats) { state.playerStats = data.player_stats; }
+    if (data.server_status) updateServerStatus({ server_status: data.server_status });
   } catch(e) {}
 }
 
-// ── TOOL ACTIONS ──────────────────────────────────────────────────────────────
 async function loadNarratives() {
   try {
     const r = await fetch(`${SERVER}/narratives/${SESSION}`);
     const data = await r.json();
-    if (data.ok && data.narratives) {
-      state.narratives = data.narratives;
-      renderNarratives();
-    }
+    if (data.ok && data.narratives) { state.narratives = data.narratives; renderNarratives(); }
   } catch(e) {}
 }
 
@@ -1419,129 +1032,317 @@ async function loadMem0() {
   } catch(e) {}
 }
 
-async function loadProof() {
-  await loadMem0();
-  await loadNarratives();
+// ── PLAYER MODAL ───────────────────────────────────────────────────────────────
+function openPlayerModal(playerName) {
+  currentModalPlayer = playerName;
+  if (!state.playerStats[playerName]) state.playerStats[playerName] = {};
+  const s = state.playerStats[playerName];
+  document.getElementById('modal-player-name').textContent = playerName;
+  document.getElementById('player-modal').classList.add('open');
+  const vpip = s.vpip||0; const pfr = s.pfr||0;
+  let profile = vpip>40?'Loose (Fish/Recreational)':vpip<15?'Nit (Very Tight)':pfr>vpip*0.75?'Tight-Aggressive (TAG)':'Loose-Aggressive (LAG)';
+  document.getElementById('modal-profile').textContent = profile;
+  const af = (s.af||0).toFixed(2);
+  document.getElementById('modal-big4').innerHTML = [
+    {val:vpip+'%',lbl:'VPIP',cls:vpip>40?'warn':''},
+    {val:pfr+'%',lbl:'PFR',cls:''},
+    {val:af,lbl:'AF',cls:s.af>3?'warn':s.af<1.5?'good':''},
+    {val:(s.winRate||0)+'%',lbl:'WIN%',cls:(s.winRate||0)>=60?'danger':(s.winRate||0)<35?'good':''},
+  ].map(x=>`<div class="modal-stat-box"><div class="modal-stat-val ${x.cls}">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
+  document.getElementById('modal-preflop').innerHTML = [
+    {val:(s.threeBet||0)+'%',lbl:'3Bet%'},
+    {val:(s.ats_pct||s.ats||0)+'%',lbl:'ATS%'},
+    {val:(s.fold_to_3b_pct||0)+'%',lbl:'Fold to 3B'},
+    {val:(s.allinCount&&s.handsTracked?Math.round(s.allinCount/s.handsTracked*100):s.allin_pct||0)+'%',lbl:'All-in%'},
+  ].map(x=>`<div class="modal-stat-box"><div class="modal-stat-val">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
+  document.getElementById('modal-postflop').innerHTML = [
+    {val:(s.wtsd||s.wtsd_pct||0)+'%',lbl:'WTSD%'},
+    {val:(s.wsd||s.wsd_pct||0)+'%',lbl:'W$SD%'},
+    {val:(s.cbet_pct||0)+'%',lbl:'CBet%'},
+    {val:(s.fold_to_cbet_pct||0)+'%',lbl:'Fold to CB'},
+  ].map(x=>`<div class="modal-stat-box"><div class="modal-stat-val">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
+  const narEl = document.getElementById('modal-narrative');
+  if (s.commentary) { narEl.className = ''; narEl.textContent = s.commentary; }
+  else { narEl.className = 'loading'; narEl.textContent = 'Click Ask Claude to generate analysis…'; }
+}
+
+function closePlayerModal() {
+  document.getElementById('player-modal').classList.remove('open');
+  currentModalPlayer = null;
+}
+
+async function askClaudeForPlayer() {
+  if (!currentModalPlayer) return;
+  const btn = document.getElementById('modal-claude-btn');
+  const narEl = document.getElementById('modal-narrative');
+  btn.textContent = '⏳ Analyzing…'; btn.disabled = true;
+  narEl.className = 'loading'; narEl.textContent = 'Claude is analyzing this player…';
+  try {
+    const gameId = new URLSearchParams(window.location.search).get('game_id') || SESSION;
+    const r = await fetch(`${SERVER}/player_narrative`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({game_id:gameId, player_name:currentModalPlayer}) });
+    const data = await r.json();
+    if (data.ok) {
+      narEl.className = ''; narEl.textContent = data.commentary;
+      if (state.playerStats[currentModalPlayer]) state.playerStats[currentModalPlayer].commentary = data.commentary;
+    } else { narEl.textContent = 'Error: ' + (data.error||'unknown'); }
+  } catch(e) { narEl.textContent = 'Error: ' + e.message; }
+  btn.textContent = '🧠 Ask Claude'; btn.disabled = false;
+}
+
+// ── SESSION TAB ────────────────────────────────────────────────────────────────
+function trackSessionHand(rawData) {
+  if (!rawData) return;
+  updatePotOddsFromRaw();
+}
+
+function updatePotOddsFromRaw() {
+  if (!state.raw) return;
+  const d = state.raw;
+  const bet = d.call_amount || 0;
+  const pot = d.pot_size || 0;
+  const pocBet = document.getElementById('poc-bet');
+  const pocPot = document.getElementById('poc-pot');
+  const pocFill = document.getElementById('poc-fill');
+  const pocTxt = document.getElementById('poc-txt');
+  if (pocBet) pocBet.textContent = bet || '—';
+  if (pocPot) pocPot.textContent = pot || '—';
+  if (bet && pot && pocFill && pocTxt) {
+    const eq = Math.round(bet / (pot + bet) * 100);
+    pocFill.style.width = Math.min(eq,100) + '%';
+    pocFill.style.background = eq > 40 ? 'var(--green)' : eq > 25 ? 'var(--warning)' : 'var(--red)';
+    pocTxt.textContent = `Need ${eq}% equity to call`;
+  }
+}
+
+function refreshSessionTab() {
+  // Pull stats from knowledge loop
+  const wu = state.lastWeightUpdate || {};
+  const patch = state.raw?.model_patch || {};
+  document.getElementById('sess-wr').textContent = (wu.live_wr||'—') + '%';
+  document.getElementById('sess-carry').textContent = (wu.carry_rate||'—') + '%';
+  const handsEl = document.getElementById('ms-hands');
+  document.getElementById('sess-hands').textContent = handsEl ? (handsEl.querySelector('span')?.textContent || handsEl.textContent || '—') : '—';
+
+  // Build timeline from hand history + narratives
+  const tl = document.getElementById('session-timeline');
+  if (!state.handHistory.length) {
+    tl.innerHTML = '<div class="empty-state" style="padding:14px"><div class="empty-text">Play hands to see replay</div></div>';
+    return;
+  }
+  tl.innerHTML = [...state.handHistory].reverse().slice(0,20).map(h => {
+    const resCls = h.result==='WON'?'won':h.result==='FOLDED'?'fold':'lost';
+    const matchedNarr = state.narratives.find(n => n.hand_num === h.hand_num);
+    const engineAction = matchedNarr?.engine_action || (matchedNarr ? 'PLAY' : '—');
+    const engCls = engineAction.toLowerCase();
+    const alert = (h.result!=='WON' && engineAction!=='FOLD' && engineAction!=='—' && h.result!=='FOLDED') ?
+      `<div class="tl-alert">⚠ Engine said ${engineAction}, you ${h.result.toLowerCase()} — pot: ${h.pot||'?'}</div>` : '';
+    return `<div class="tl-row">
+      <div class="tl-num">${h.hand_num}</div>
+      <div class="tl-cards">${h.hole} ${h.board?'· '+h.board.slice(0,8):''}</div>
+      <div class="tl-eng ${engCls}">${engineAction}</div>
+      <div class="tl-act">${h.result==='WON'?'PLAYED':h.result==='FOLDED'?'FOLDED':'PLAYED'}</div>
+      <div class="tl-out ${resCls}">${h.result}</div>
+      <div class="tl-pot">${h.pot?'+'+h.pot:'—'}</div>
+      ${alert}
+    </div>`;
+  }).join('');
+
+  // Stack graph
+  const sgEl = document.getElementById('stack-graph-bars');
+  if (state.handHistory.length > 1) {
+    let running = 0;
+    const vals = state.handHistory.map(h => {
+      if (h.result==='WON') running += (h.pot||40);
+      else if (h.result==='LOST') running -= 20;
+      return running;
+    });
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const range = max - min || 1;
+    sgEl.innerHTML = vals.slice(-20).map(v => {
+      const pct = Math.max(5, Math.round((v - min) / range * 100));
+      const neg = v < 0;
+      return `<div class="sg-bar ${neg?'neg':''}" style="height:${pct}%"></div>`;
+    }).join('');
+  }
+}
+
+// ── PLAYERS TAB ────────────────────────────────────────────────────────────────
+function refreshPlayersTab() {
+  const allNames = Object.keys(state.playerStats);
+  const snap = state.raw?.all_players_snap || {};
+  const snapNames = Object.keys(snap).filter(n => !snap[n]?.isHero);
+  const names = [...new Set([...allNames, ...snapNames])];
+
+  const listEl = document.getElementById('full-player-list');
+  if (!names.length) { listEl.innerHTML = '<div class="empty-state" style="padding:16px"><div class="empty-text">No players tracked yet</div></div>'; return; }
+
+  listEl.innerHTML = names.sort((a,b) => ((state.playerStats[b]?.handsTracked||0)-(state.playerStats[a]?.handsTracked||0))).map(name => {
+    const s = state.playerStats[name] || {};
+    const snapD = snap[name] || {};
+    const isDanger = s.isDanger || (s.winRate>=60 && (s.handsTracked||0)>=5);
+    const initials = name.slice(0,2).toUpperCase();
+    const badgeCls = isDanger ? 'danger' : (s.handsTracked||0)>=5 ? 'ok' : 'new';
+    const badgeTxt = isDanger ? 'DANGER' : (s.handsTracked||0)>=5 ? 'TRACKED' : 'NEW';
+    const sub = (s.handsTracked||0)>=1 ? `${Math.round(s.vpip||0)}% VPIP · AF ${(s.af||0).toFixed(1)} · ${s.handsTracked}h` : snapD.stack ? `Stack: ${snapD.stack}` : 'No data yet';
+    return `<div class="plist-item" onclick="showPlayerDetail('${name.replace(/'/g,"\\'")}',this)">
+      <div class="plist-avatar ${isDanger?'danger':''}">${initials}</div>
+      <div><div class="plist-name">${name.length>18?name.slice(0,18)+'…':name}</div><div class="plist-sub">${sub}</div></div>
+      <div class="plist-badge ${badgeCls}">${badgeTxt}</div>
+    </div>`;
+  }).join('');
+}
+
+function showPlayerDetail(name, el) {
+  document.querySelectorAll('.plist-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  const s = state.playerStats[name] || {};
+  const snap = state.raw?.all_players_snap?.[name] || {};
+  const vpip = Math.round(s.vpip||0); const pfr = Math.round(s.pfr||0);
+  const af = (s.af||0).toFixed(2);
+  const wr = Math.round(s.winRate||0);
+  let profile = vpip>40?'Loose (Fish/Recreational)':vpip<15?'Nit (Very Tight)':pfr>vpip*0.75?'Tight-Aggressive (TAG)':'Loose-Aggressive (LAG)';
+  const hasStats = (s.handsTracked||0)>=1;
+  const detailEl = document.getElementById('player-detail-panel');
+  detailEl.innerHTML = `
+    <div class="pdetail-name">${name}</div>
+    ${hasStats ? `<div class="pdetail-profile">${profile}</div>` : ''}
+    ${snap.stack ? `<div style="font-family:var(--f-mono);font-size:11px;color:var(--t2);margin-bottom:10px">Current stack: ${snap.stack}</div>` : ''}
+    ${hasStats ? `<div class="pdetail-grid">
+      <div class="dstat"><div class="dv ${vpip>45?'d':''}">${vpip}%</div><div class="dl">VPIP</div></div>
+      <div class="dstat"><div class="dv">${pfr}%</div><div class="dl">PFR</div></div>
+      <div class="dstat"><div class="dv ${af>3?'a':af<1.5?'t':''}">${af}</div><div class="dl">AF</div></div>
+      <div class="dstat"><div class="dv ${wr>=60?'d':wr<35?'t':''}">${wr}%</div><div class="dl">WIN%</div></div>
+    </div>` : '<div class="empty-state" style="padding:12px"><div class="empty-text">No hand data yet — stats appear after first hand</div></div>'}
+    <div class="notes-box">
+      <div class="notes-lbl">📝 Your Notes</div>
+      <textarea class="notes-input" id="notes-${name.replace(/\s/g,'_')}" placeholder="Add notes about this player…" onblur="saveNote('${name.replace(/'/g,"\\'")}',this.value)">${s._notes||''}</textarea>
+    </div>
+    <div class="claude-analysis-box ${s.commentary?'':'loading'}" id="pdetail-claude-${name.replace(/\s/g,'_')}">${s.commentary||'Click Ask Claude to generate analysis…'}</div>
+    <button class="ask-claude-btn" onclick="askClaudeForPlayerDetail('${name.replace(/'/g,"\\'")}')">🧠 Ask Claude</button>
+  `;
+}
+
+function saveNote(name, value) {
+  if (!state.playerStats[name]) state.playerStats[name] = {};
+  state.playerStats[name]._notes = value;
+}
+
+async function askClaudeForPlayerDetail(name) {
+  const btn = document.querySelector('.ask-claude-btn');
+  const boxId = 'pdetail-claude-' + name.replace(/\s/g,'_');
+  const box = document.getElementById(boxId);
+  if (!btn || !box) return;
+  btn.textContent = '⏳ Analyzing…'; btn.disabled = true;
+  box.className = 'claude-analysis-box loading'; box.textContent = 'Claude is analyzing…';
+  try {
+    const gid = new URLSearchParams(window.location.search).get('game_id') || SESSION;
+    const r = await fetch(`${SERVER}/player_narrative`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({game_id:gid, player_name:name}) });
+    const data = await r.json();
+    if (data.ok) {
+      box.className = 'claude-analysis-box'; box.textContent = data.commentary;
+      if (!state.playerStats[name]) state.playerStats[name] = {};
+      state.playerStats[name].commentary = data.commentary;
+    } else { box.textContent = 'Error: ' + (data.error||'unknown'); }
+  } catch(e) { box.textContent = 'Error: ' + e.message; }
+  btn.textContent = '🧠 Ask Claude'; btn.disabled = false;
+}
+
+// ── ANALYSIS TAB ───────────────────────────────────────────────────────────────
+function refreshAnalysisTab() {
+  // Carry heat map from model
+  const model = state.raw?.model_meta || {};
+  const heatEl = document.getElementById('carry-heatmap');
+  const carryHot = state.raw?.carry_alert?.topCarry || [];
+  if (carryHot.length) {
+    heatEl.innerHTML = '<div class="heat-grid">' + carryHot.slice(0,14).map(x => {
+      const lvl = x.rate >= 60 ? 'h5' : x.rate >= 45 ? 'h4' : x.rate >= 30 ? 'h3' : x.rate >= 15 ? 'h2' : 'h1';
+      return `<div class="heat-card ${lvl}">${x.card}</div>`;
+    }).join('') + '</div>';
+  }
+  updatePotOddsFromRaw();
 }
 
 async function runAnalysis() {
-  const btn = document.querySelector('.tool-btn.primary');
-  if (btn) btn.textContent = '⏳ Analyzing…';
+  const btns = document.querySelectorAll('.tool-btn.primary');
+  btns.forEach(b => b.textContent = '⏳ Analyzing…');
+  const resultEl = document.getElementById('full-analysis-result');
+  if (resultEl) { resultEl.innerHTML = '<div class="empty-state" style="padding:8px"><div class="empty-text">Running Claude analysis…</div></div>'; }
   try {
-    const r = await fetch(`${SERVER}/analyze`);
+    const gid = SESSION || GAME_ID;
+    const r = await fetch(`${SERVER}/analyze?game_id=${encodeURIComponent(gid)}`);
     const data = await r.json();
     if (data.ok) {
-      alert('Analysis complete!\n\n' + (data.claude_analysis || '').slice(0, 500) + '…');
+      const brief = document.getElementById('presession-brief');
+      if (brief) brief.innerHTML = `<div class="brief-item"><strong>Win rate:</strong>${data.stats?.win_rate||'—'}% across ${data.stats?.total||0} hands</div><div class="brief-item"><strong>Carry rate:</strong>${data.stats?.carry_rate||'—'}%</div><div class="brief-item"><strong>Mem0 memories:</strong>${data.mem0_memories||0} insights stored</div>`;
+      if (resultEl) { resultEl.innerHTML = `<div style="font-size:11px;color:var(--t2);line-height:1.6;white-space:pre-wrap">${(data.claude_analysis||'').slice(0,600)}…</div>`; }
+      alert('Analysis complete!\n\n' + (data.claude_analysis||'').slice(0,400) + '…');
     }
-  } catch(e) {
-    alert('Analysis error: ' + e.message);
-  }
-  if (btn) btn.textContent = '🔍 Run Full Analysis';
+  } catch(e) { alert('Analysis error: ' + e.message); }
+  btns.forEach(b => b.textContent = '🔍 Full Analysis');
 }
 
-// ── CSV UPLOAD ────────────────────────────────────────────────────────────────
-// model.js must be loaded for CSV parsing
-// We'll load it dynamically from the extension or inline it
-document.getElementById('upload-input').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const stat = document.getElementById('upload-status');
-  stat.textContent = 'Parsing CSV…';
-  stat.style.color = 'var(--gold)';
-
-  try {
-    const text = await file.text();
-    const gid = SESSION || GAME_ID || '';
-    const r = await fetch(`${SERVER}/upload_csv?game_id=${encodeURIComponent(gid)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: text
-    });
-    const data = await r.json();
-    if (data.ok) {
-      stat.textContent = `✓ ${data.hands} hands stored → DB`;
-      stat.style.color = 'var(--green)';
-
-      // Model lives on server — extension fetches via GET /model/{game_id}
-
-      setTimeout(() => {
-        stat.textContent = '⚡ LangGraph analyzing patterns…';
-        stat.style.color = 'var(--gold)';
-      }, 1500);
-      setTimeout(() => {
-        const cr = data.model?.carryRate || 0;
-        const tc = (data.model?.topCards || []).slice(0,3).join(' ');
-        stat.textContent = `✓ ${data.hands} hands | carry ${cr}% | top: ${tc}`;
-        stat.style.color = 'var(--green)';
-      }, 4000);
-    } else {
-      stat.textContent = '⚠ ' + (data.error || 'Upload failed');
-      stat.style.color = 'var(--red)';
-    }
-  } catch(err) {
-    stat.textContent = '⚠ ' + err.message;
-    stat.style.color = 'var(--red)';
-  }
-});
-
-// ── RECEIVE GAME ID FROM EXTENSION ───────────────────────────────────────────
-
-// ── PLAYER STATS FROM DB ─────────────────────────────────────────────────────
+// ── PLAYER STATS FROM DB ───────────────────────────────────────────────────────
 async function loadPlayerStats() {
   if (!SESSION) return;
   try {
     const r = await fetch(SERVER + '/player_stats/' + SESSION);
     const d = await r.json();
     if (d.ok && d.players && d.players.length) {
-      // Merge DB stats into state — DB stats win over session-only DOM stats
       d.players.forEach(p => {
-        // Normalize DB field names to match what HUD rendering expects
         const normalized = {
-          ...state.playerStats[p.player_name],   // keep live session data
-          // DB computed percentages — map to HUD field names
-          vpip:           p.vpip_pct       || p.vpip       || 0,
-          pfr:            p.pfr_pct        || p.pfr        || 0,
-          threeBet:       p.threebet_pct   || p.threeBet   || 0,
-          winRate:        p.win_pct        || p.winRate    || 0,
-          af:             p.af             || 0,
-          wtsd:           p.wtsd_pct       || p.wtsd       || 0,
-          wsd:            p.wsd_pct        || p.wsd        || 0,
-          ats:            p.ats_pct        || p.ats        || 0,
-          fold_to_3b_pct: p.fold_to_3b_pct || 0,
-          cbet_pct:       p.cbet_pct       || 0,
-          fold_to_cbet_pct: p.fold_to_cbet_pct || 0,
-          handsTracked:   p.hands_seen     || 0,
-          isDanger:       p.isDanger       || false,
-          isFeeder:       p.isFeeder       || false,
-          commentary:     p.commentary     || state.playerStats[p.player_name]?.commentary || '',
-          player_name:    p.player_name,
-          fromDB:         true,
+          ...state.playerStats[p.player_name],
+          vpip:p.vpip_pct||p.vpip||0, pfr:p.pfr_pct||p.pfr||0,
+          threeBet:p.threebet_pct||p.threeBet||0, winRate:p.win_pct||p.winRate||0,
+          af:p.af||0, wtsd:p.wtsd_pct||p.wtsd||0, wsd:p.wsd_pct||p.wsd||0,
+          ats:p.ats_pct||p.ats||0, fold_to_3b_pct:p.fold_to_3b_pct||0,
+          cbet_pct:p.cbet_pct||0, fold_to_cbet_pct:p.fold_to_cbet_pct||0,
+          handsTracked:p.hands_seen||0,
+          isDanger:p.isDanger||false, isFeeder:p.isFeeder||false,
+          commentary:p.commentary||state.playerStats[p.player_name]?.commentary||'',
+          player_name:p.player_name, fromDB:true,
         };
         state.playerStats[p.player_name] = normalized;
       });
       renderPlayerHub(state.raw || {});
-      console.log('[dashboard] Player stats loaded from DB:', d.players.length, 'players');
     }
   } catch(e) {}
 }
 
-// Handle auto-generated narratives from server
+// ── HANDLE AUTO NARRATIVES ─────────────────────────────────────────────────────
 function handlePlayerNarrative(msg) {
   const { player, narrative } = msg;
   if (!player || !narrative) return;
-  if (state.playerStats[player]) {
-    state.playerStats[player].commentary = narrative;
-    renderPlayerHub(state.raw || {});
-  }
+  if (state.playerStats[player]) { state.playerStats[player].commentary = narrative; renderPlayerHub(state.raw || {}); }
 }
 
-// ── BOOT ──────────────────────────────────────────────────────────────────────
-// initSession() fetches /active from server to get game ID, then connects WS
+// ── CSV UPLOAD ─────────────────────────────────────────────────────────────────
+document.getElementById('upload-input').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const stat = document.getElementById('upload-status');
+  stat.textContent = 'Parsing CSV…'; stat.style.color = 'var(--warning)';
+  try {
+    const text = await file.text();
+    const gid = SESSION || GAME_ID || '';
+    const r = await fetch(`${SERVER}/upload_csv?game_id=${encodeURIComponent(gid)}`, { method:'POST', headers:{'Content-Type':'text/plain'}, body: text });
+    const data = await r.json();
+    if (data.ok) {
+      stat.textContent = `✓ ${data.hands} hands stored → DB`; stat.style.color = 'var(--green)';
+      setTimeout(() => { stat.textContent = '⚡ LangGraph analyzing patterns…'; stat.style.color = 'var(--warning)'; }, 1500);
+      setTimeout(() => {
+        const cr = data.model?.carryRate||0; const tc = (data.model?.topCards||[]).slice(0,3).join(' ');
+        stat.textContent = `✓ ${data.hands} hands | carry ${cr}% | top: ${tc}`; stat.style.color = 'var(--green)';
+      }, 4000);
+    } else { stat.textContent = '⚠ ' + (data.error||'Upload failed'); stat.style.color = 'var(--red)'; }
+  } catch(err) { stat.textContent = '⚠ ' + err.message; stat.style.color = 'var(--red)'; }
+});
+
+// ── BOOT ───────────────────────────────────────────────────────────────────────
 initSession();
 renderKnowledge();
 setInterval(loadNarratives, 5000);
 setInterval(renderKnowledge, 10000);
 setInterval(loadPlayerStats, 15000);
-setInterval(loadMem0, 30000);  // refresh Mem0 every 30s
+setInterval(loadMem0, 30000);
 </script>
 </html>
