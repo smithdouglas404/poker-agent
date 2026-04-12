@@ -586,116 +586,65 @@ body {
 .hand-note.pending { color: var(--text-3); font-style: italic; }
 
 /* ── RIGHT: PLAYER HUB ── */
-#player-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+#player-panel { display:flex; flex-direction:column; gap:7px; }
 
-.player-entry {
-  background: var(--bg-panel-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  transition: border-color 0.2s;
-}
+.player-entry { background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
+.player-entry.danger { border-color:rgba(255,61,61,0.4); }
+.player-entry.feeder { border-color:rgba(77,166,255,0.3); }
 
-.player-entry.danger { border-color: rgba(255,61,61,0.4); }
-.player-entry.feeder { border-color: rgba(77,166,255,0.3); }
+.pname-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+.player-name { font-family:var(--f-head); font-size:13px; font-weight:600; color:var(--text-1); }
+.player-tag { font-family:var(--f-mono); font-size:8px; padding:2px 6px; border-radius:10px; letter-spacing:1px; }
+.player-tag.danger { background:var(--danger-dim); color:var(--danger); border:1px solid rgba(255,61,61,0.3); }
+.player-tag.feeder { background:var(--info-dim); color:var(--info); border:1px solid rgba(77,166,255,0.3); }
 
-.player-name-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
+.hud-big4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:3px; margin-bottom:4px; }
+.hud-stat { text-align:center; }
+.hud-val  { font-family:var(--f-mono); font-size:13px; font-weight:500; color:var(--text-1); }
+.hud-val.danger { color:var(--danger); }
+.hud-val.warn   { color:var(--warning); }
+.hud-val.good   { color:var(--accent); }
+.hud-lbl { font-size:8px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; }
 
-.player-name {
-  font-family: var(--f-head);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-1);
-}
+.winrate-bar { height:2px; background:var(--border); border-radius:1px; margin:3px 0; overflow:hidden; }
+.winrate-fill { height:100%; border-radius:1px; transition:width .5s; }
 
-.player-tag {
-  font-family: var(--f-mono);
-  font-size: 9px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  letter-spacing: 1px;
-  font-weight: 500;
-}
+.hud-preflop { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; margin-bottom:4px; padding-top:4px; border-top:1px solid var(--border); font-family:var(--f-mono); font-size:9px; }
+.hud-pf-stat { display:flex; flex-direction:column; align-items:center; }
+.hud-pf-val  { color:var(--text-2); font-size:10px; }
+.hud-pf-lbl  { color:var(--text-3); font-size:8px; }
 
-.player-tag.danger { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(255,61,61,0.3); }
-.player-tag.feeder { background: var(--info-dim);   color: var(--info);   border: 1px solid rgba(77,166,255,0.3); }
-.player-tag.watch  { background: var(--warning-dim); color: var(--warning); border: 1px solid rgba(255,176,32,0.3); }
+.player-bottom-row { display:flex; justify-content:space-between; align-items:center; margin-top:4px; }
+.player-sample { font-size:8px; color:var(--text-3); font-style:italic; font-family:var(--f-mono); }
 
-.player-stats-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 6px;
-}
+.claude-oval { font-family:var(--f-mono); font-size:8px; padding:2px 9px; border-radius:20px; background:var(--purple-dim); color:var(--purple); border:1px solid rgba(167,139,250,0.3); cursor:pointer; transition:all .2s; white-space:nowrap; }
+.claude-oval:hover { background:rgba(167,139,250,0.25); }
+.claude-oval.loading { opacity:0.5; cursor:wait; }
 
-.pstat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+#player-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; }
+#player-modal.open { display:flex; }
+#player-modal-inner { background:var(--bg-panel); border:1px solid var(--border-hi); border-radius:12px; width:560px; max-height:80vh; overflow-y:auto; padding:20px 24px; }
+#modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+#modal-player-name { font-family:var(--f-head); font-size:22px; font-weight:700; color:var(--text-1); letter-spacing:1px; }
+#modal-close { font-size:18px; color:var(--text-3); background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; }
+#modal-close:hover { color:var(--text-1); background:var(--bg-hover); }
+.modal-section { margin-bottom:14px; }
+.modal-section-title { font-family:var(--f-head); font-size:10px; letter-spacing:2px; color:var(--text-3); text-transform:uppercase; margin-bottom:7px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+.modal-stats-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
+.modal-stat-box { background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; padding:8px; text-align:center; }
+.modal-stat-val { font-family:var(--f-mono); font-size:18px; font-weight:500; color:var(--text-1); }
+.modal-stat-val.danger { color:var(--danger); }
+.modal-stat-val.warn   { color:var(--warning); }
+.modal-stat-val.good   { color:var(--accent); }
+.modal-stat-lbl { font-size:9px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; }
+.modal-profile-badge { display:inline-block; font-family:var(--f-mono); font-size:10px; padding:3px 12px; border-radius:20px; background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-glow); margin-bottom:10px; }
+#modal-narrative { font-size:12px; color:var(--warning); line-height:1.7; padding:12px; background:rgba(255,176,32,0.05); border:1px solid rgba(255,176,32,0.2); border-radius:6px; }
+#modal-narrative.loading { color:var(--text-3); font-style:italic; font-size:11px; background:var(--bg-panel-2); border-color:var(--border); }
 
-.pstat-val {
-  font-family: var(--f-mono);
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--text-1);
-}
-
-.pstat-val.danger { color: var(--danger); }
-.pstat-val.good   { color: var(--accent); }
-.pstat-val.warn   { color: var(--warning); }
-
-.pstat-label {
-  font-size: 9px;
-  color: var(--text-3);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.winrate-bar {
-  height: 3px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 4px;
-}
-
-.winrate-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.5s;
-}
-
-.player-last-hand {
-  font-family: var(--f-mono);
-  font-size: 10px;
-  color: var(--text-3);
-}
-
-.player-stack {
-  font-family: var(--f-mono);
-  font-size: 11px;
-  color: var(--text-2);
-}
-
-.player-status-badge {
-  font-size: 9px;
-  color: var(--text-3);
-  font-style: italic;
-}
-
-/* ── BOTTOM ROW ── */
+/* ── BOTTOM ROW ── /* ── BOTTOM ROW ── */
 #bottom-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 280px;
+  grid-template-columns: 1fr 1fr 1fr 280px;
   gap: 1px;
   background: var(--border);
   border-top: 1px solid var(--border);
@@ -918,24 +867,58 @@ body {
 
   <!-- RIGHT: PLAYER HUB -->
   <div class="panel" id="player-panel">
-    <div class="panel-label">Player Hub</div>
-    <div id="player-list"><div class="empty-state">Players appear after showdowns</div></div>
+    <div class="panel-label">Player HUB — Full HUD</div>
+    <div id="player-list"><div class="empty-state">Players appear after hands are tracked</div></div>
+  </div>
+</div>
+
+<!-- PLAYER MODAL -->
+<div id="player-modal">
+  <div id="player-modal-inner">
+    <div id="modal-header">
+      <div id="modal-player-name">Player</div>
+      <button id="modal-close" onclick="closePlayerModal()">✕</button>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Player Profile</div>
+      <div class="modal-profile-badge" id="modal-profile">—</div>
+      <div class="modal-stats-grid" id="modal-big4"></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Pre-flop</div>
+      <div class="modal-stats-grid" id="modal-preflop"></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Post-flop</div>
+      <div class="modal-stats-grid" id="modal-postflop"></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">🧠 Claude Analysis</div>
+      <div id="modal-narrative" class="loading">Click "Ask Claude" to generate narrative…</div>
+      <button class="tool-btn" id="modal-claude-btn" style="margin-top:8px" onclick="askClaudeForPlayer()">🧠 Ask Claude</button>
+    </div>
   </div>
 </div>
 
 <!-- BOTTOM ROW -->
-<div id="bottom-row">
+<div id="bottom-row" style="grid-template-columns: 1fr 1fr 1fr 280px;">
 
   <!-- Narrative Feed -->
   <div id="narrative-panel">
-    <div class="panel-label">Claude Narrative Feed</div>
-    <div id="narrative-list"><div class="empty-state">Claude notes appear here after each hand</div></div>
+    <div class="panel-label">Narrative Feed <span style="font-size:9px;color:var(--text-3)">(Mem0 + Claude · last 5 hands)</span></div>
+    <div id="narrative-list"><div class="empty-state">No narratives yet — play hands</div></div>
   </div>
 
-  <!-- Mem0 / Analysis -->
+  <!-- Mem0 Memories -->
   <div id="narrative-panel" style="background:var(--bg-panel); padding:14px 16px; overflow-y:auto;">
     <div class="panel-label">Mem0 Memories</div>
-    <div id="mem0-list"><div class="empty-state">Memories stored by Mem0 appear here</div></div>
+    <div id="mem0-list"><div class="empty-state">Memories appear here as hands are played</div></div>
+  </div>
+
+  <!-- Knowledge Panel — what Mem0/Letta is learning -->
+  <div style="background:var(--bg-panel); padding:14px 16px; overflow-y:auto;">
+    <div class="panel-label">Knowledge Loop</div>
+    <div id="knowledge-list"><div class="empty-state">Waiting for first hand…</div></div>
   </div>
 
   <!-- Upload + Tools -->
@@ -961,10 +944,11 @@ body {
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const params   = new URLSearchParams(window.location.search);
 const SESSION  = params.get('session') || 'unknown';
+const GAME_ID  = params.get('game_id') || SESSION;
 const SERVER   = params.get('server')  || 'https://poker-agent-production.up.railway.app';
 const WS_URL   = SERVER.replace('https://', 'wss://').replace('http://', 'ws://');
 
-document.getElementById('session-info').textContent = 'SESSION ' + SESSION.slice(0,20);
+document.getElementById('session-info').textContent = 'GAME ' + (GAME_ID||SESSION).slice(0,20);
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let state = {
@@ -996,9 +980,41 @@ function connectWS() {
   ws.onmessage = (evt) => {
     try {
       const msg = JSON.parse(evt.data);
+
       if (msg.type === 'raw') {
         state.raw = msg.data;
         renderAll();
+
+      } else if (msg.type === 'weight_updates') {
+        // Letta/Claude returned weight_updates — patch onto local model
+        // These affect next hand's getAdvice() decisions:
+        // carryBoost → boosts carry signal
+        // jeezyWarning → downgrades marginal bets to check postflop
+        // allinWarning → adds warning reason
+        // hotCards → merged into predicted cards (effectiveConnecting)
+        const wu = msg.data;
+        if (state.raw) {
+          if (!state.raw.model_patch) state.raw.model_patch = {};
+          Object.assign(state.raw.model_patch, wu.weight_updates || {});
+        }
+        // Store weight_updates for Knowledge panel
+        state.lastWeightUpdate = wu;
+        // Add to narrative feed
+        if (wu.next_hand) {
+          state.narratives.unshift({
+            hand_num: wu.hand_num,
+            next_hand: wu.next_hand,
+            ts: new Date().toLocaleTimeString(),
+            weight_updates: wu.weight_updates,
+            carry_rate: wu.carry_rate,
+            live_wr: wu.live_wr,
+            danger_players: wu.danger_players,
+          });
+          if (state.narratives.length > 50) state.narratives.pop();
+          renderNarratives();
+          renderKnowledge();
+        }
+
       } else if (msg.type === 'narrative') {
         state.narratives.unshift(msg.data);
         if (state.narratives.length > 50) state.narratives.pop();
@@ -1068,7 +1084,21 @@ function renderAll() {
 // ── DECISION ──────────────────────────────────────────────────────────────────
 function renderDecision(d) {
   const dec = d.decision;
-  if (!dec) return;
+  const box   = document.getElementById('action-display');
+  const emoji = document.getElementById('action-emoji');
+  const text  = document.getElementById('action-text');
+  const sizing = document.getElementById('action-sizing');
+
+  // No model loaded — show upload prompt
+  if (!d.model_ready && (!dec || !dec.action)) {
+    box.className = 'check';
+    emoji.textContent = '📂';
+    text.textContent  = 'UPLOAD CSV';
+    sizing.textContent = 'Open dashboard tools panel to seed model';
+    return;
+  }
+
+  if (!dec || !dec.action) return;
 
   const box   = document.getElementById('action-display');
   const emoji = document.getElementById('action-emoji');
@@ -1234,60 +1264,155 @@ function renderCarryAlert(d) {
 }
 
 // ── PLAYER HUB ────────────────────────────────────────────────────────────────
+let currentModalPlayer = null;
+
 function renderPlayerHub(d) {
   const stats = d.player_stats || state.playerStats || {};
-  if (!Object.keys(stats).length) return;
+  if (Object.keys(stats).length) Object.assign(state.playerStats, stats);
 
-  // Merge new stats
-  Object.assign(state.playerStats, stats);
+  const players = Object.entries(state.playerStats)
+    .filter(([,s]) => (s.handsTracked||0) >= 1)
+    .sort((a,b) => (b[1].handsTracked||0) - (a[1].handsTracked||0));
 
-  const sorted = Object.entries(state.playerStats)
-    .filter(([,st]) => (st.showdowns || 0) >= 2 || (st.domWins || 0) > 0)
-    .sort((a,b) => (b[1].winRate||0) - (a[1].winRate||0));
-
-  if (!sorted.length) return;
+  if (!players.length) return;
 
   const el = document.getElementById('player-list');
+  const snap = d.all_players_snap || {};
 
-  // Also incorporate live win counts from DOM
-  const winCounts = d.win_counts || {};
-  const handMessages = d.hand_messages || {};
+  el.innerHTML = players.map(([name, s]) => {
+    const isDanger = s.isDanger || (s.winRate >= 60 && (s.handsTracked||0) >= 5);
+    const isFeeder = !isDanger && s.winRate < 35 && (s.handsTracked||0) >= 5;
+    const entryCls = isDanger ? 'danger' : isFeeder ? 'feeder' : '';
+    const tag      = isDanger ? '<span class="player-tag danger">⚠ DANGER</span>' :
+                     isFeeder ? '<span class="player-tag feeder">↗ FEEDER</span>' : '';
 
-  el.innerHTML = sorted.map(([name, st]) => {
-    const isDanger = st.isDanger || (st.winRate >= 60 && (st.showdowns||0) >= 3);
-    const isFeeder = !isDanger && st.winRate < 35 && (st.showdowns||0) >= 3;
-    const tagCls   = isDanger ? 'danger' : isFeeder ? 'feeder' : '';
-    const tagText  = isDanger ? '⚠ DANGER' : isFeeder ? '↗ FEEDER' : '';
+    const vpip = s.vpip || 0;
+    const pfr  = s.pfr  || 0;
+    const af   = (s.af  || 0).toFixed(1);
+    const wr   = s.winRate || 0;
+
+    const vpip3bet = s.threeBet || 0;
+    const wtsd     = s.wtsd     || 0;
+    const wsd      = s.wsd      || 0;
+
+    const wrColor  = wr >= 60 ? 'danger' : wr < 35 ? 'good' : '';
+    const afColor  = s.af > 3 ? 'warn' : s.af < 1.5 ? '' : '';
     const fillColor = isDanger ? 'var(--danger)' : isFeeder ? 'var(--info)' : 'var(--accent)';
-    const wr = st.winRate || 0;
-    const wrCls = wr >= 60 ? 'danger' : wr >= 45 ? 'warn' : wr < 35 ? 'good' : '';
-    const lastHand = handMessages[name] ? `Last: ${handMessages[name]}` : '';
-    const domWin = winCounts[name] ? `${winCounts[name]} session wins` : '';
-    const shortName = name.length > 14 ? name.slice(0,14)+'…' : name;
+    const short     = name.length > 13 ? name.slice(0,13)+'…' : name;
 
-    return `<div class="player-entry ${tagCls}">
-      <div class="player-name-row">
-        <div class="player-name">${shortName}</div>
-        ${tagText ? `<div class="player-tag ${tagCls}">${tagText}</div>` : ''}
+    // Live stack from DOM snap
+    const snapData = snap[name] || {};
+    const stackLine = snapData.stack ? `<span>Stack: ${snapData.stack}</span>` : '';
+    const lastHand  = snapData.handMessage ? `<span>${snapData.handMessage}</span>` : '';
+
+    return `<div class="player-entry ${entryCls}">
+      <div class="pname-row">
+        <span class="player-name">${short}</span>
+        ${tag}
       </div>
-      <div class="player-stats-row">
-        <div class="pstat">
-          <div class="pstat-val ${wrCls}">${wr}%</div>
-          <div class="pstat-label">WIN RATE</div>
-        </div>
-        <div class="pstat">
-          <div class="pstat-val">${st.showdowns||0}</div>
-          <div class="pstat-label">SHOWDOWNS</div>
-        </div>
-        <div class="pstat">
-          <div class="pstat-val">${st.wins||0}</div>
-          <div class="pstat-label">WINS</div>
-        </div>
+      <div class="hud-big4">
+        <div class="hud-stat"><div class="hud-val">${vpip}%</div><div class="hud-lbl">VPIP</div></div>
+        <div class="hud-stat"><div class="hud-val">${pfr}%</div><div class="hud-lbl">PFR</div></div>
+        <div class="hud-stat"><div class="hud-val ${afColor}">${af}</div><div class="hud-lbl">AF</div></div>
+        <div class="hud-stat"><div class="hud-val ${wrColor}">${wr}%</div><div class="hud-lbl">WIN</div></div>
       </div>
       <div class="winrate-bar"><div class="winrate-fill" style="width:${Math.min(wr,100)}%;background:${fillColor}"></div></div>
-      ${lastHand || domWin ? `<div class="player-last-hand">${[lastHand,domWin].filter(Boolean).join(' · ')}</div>` : ''}
+      <div class="hud-preflop">
+        <div class="hud-pf-stat"><div class="hud-pf-val">${vpip3bet}%</div><div class="hud-pf-lbl">3Bet</div></div>
+        <div class="hud-pf-stat"><div class="hud-pf-val">${wtsd}%</div><div class="hud-pf-lbl">WTSD</div></div>
+        <div class="hud-pf-stat"><div class="hud-pf-val">${wsd}%</div><div class="hud-pf-lbl">W$SD</div></div>
+      </div>
+      <div class="player-bottom-row">
+        <span class="player-sample">${s.handsTracked||0}h ${lastHand || stackLine}</span>
+        <button class="claude-oval" onclick="openPlayerModal('${name.replace(/'/g,"\\'")}')">🧠 Claude</button>
+      </div>
     </div>`;
   }).join('');
+}
+
+function openPlayerModal(playerName) {
+  currentModalPlayer = playerName;
+  const s = state.playerStats[playerName];
+  if (!s) return;
+
+  document.getElementById('modal-player-name').textContent = playerName;
+  document.getElementById('player-modal').classList.add('open');
+
+  // Profile label
+  const vpip = s.vpip || 0;
+  const pfr  = s.pfr  || 0;
+  let profile = vpip > 40 ? 'Loose (Fish/Recreational)' :
+                vpip < 15 ? 'Nit (Very Tight)' :
+                pfr > vpip * 0.75 ? 'Tight-Aggressive (TAG)' : 'Loose-Aggressive (LAG)';
+  document.getElementById('modal-profile').textContent = profile;
+
+  // Big Four
+  const big4El = document.getElementById('modal-big4');
+  const af = (s.af||0).toFixed(2);
+  big4El.innerHTML = [
+    { val: vpip+'%', lbl: 'VPIP', cls: vpip>40?'warn':'' },
+    { val: pfr+'%',  lbl: 'PFR',  cls: '' },
+    { val: af,       lbl: 'AF',   cls: s.af>3?'warn':s.af<1.5?'good':'' },
+    { val: (s.winRate||0)+'%', lbl: 'WIN%', cls: (s.winRate||0)>=60?'danger':(s.winRate||0)<35?'good':'' },
+  ].map(x => `<div class="modal-stat-box"><div class="modal-stat-val ${x.cls}">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
+
+  // Pre-flop
+  const pfEl = document.getElementById('modal-preflop');
+  pfEl.innerHTML = [
+    { val: (s.threeBet||0)+'%', lbl: '3Bet%' },
+    { val: '—',                  lbl: 'Fold to 3B' },
+    { val: '—',                  lbl: 'ATS%' },
+    { val: (s.allinCount && s.handsTracked ? Math.round(s.allinCount/s.handsTracked*100) : 0)+'%', lbl: 'All-in%' },
+  ].map(x => `<div class="modal-stat-box"><div class="modal-stat-val">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
+
+  // Post-flop
+  const postEl = document.getElementById('modal-postflop');
+  postEl.innerHTML = [
+    { val: (s.wtsd||0)+'%', lbl: 'WTSD%' },
+    { val: (s.wsd||0)+'%',  lbl: 'W$SD%' },
+    { val: '—',              lbl: 'CBet%' },
+    { val: (s.showdownCount||0)+'/'+(s.handsTracked||0), lbl: 'SD/Hands' },
+  ].map(x => `<div class="modal-stat-box"><div class="modal-stat-val">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
+
+  // Reset narrative
+  const narEl = document.getElementById('modal-narrative');
+  narEl.className = 'loading';
+  narEl.textContent = 'Click "Ask Claude" to generate narrative…';
+}
+
+function closePlayerModal() {
+  document.getElementById('player-modal').classList.remove('open');
+  currentModalPlayer = null;
+}
+
+async function askClaudeForPlayer() {
+  if (!currentModalPlayer) return;
+  const btn   = document.getElementById('modal-claude-btn');
+  const narEl = document.getElementById('modal-narrative');
+  btn.textContent = '⏳ Analyzing…';
+  btn.disabled    = true;
+  narEl.className = 'loading';
+  narEl.textContent = 'Claude is analyzing this player…';
+
+  try {
+    const gameId = new URLSearchParams(window.location.search).get('game_id') || SESSION;
+    const r = await fetch(`${SERVER}/player_narrative`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ game_id: gameId, player_name: currentModalPlayer })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      narEl.className = '';
+      narEl.textContent = data.commentary;
+    } else {
+      narEl.textContent = 'Error: ' + (data.error || 'unknown');
+    }
+  } catch(e) {
+    narEl.textContent = 'Error: ' + e.message;
+  }
+  btn.textContent = '🧠 Ask Claude';
+  btn.disabled    = false;
 }
 
 // ── HAND HISTORY ──────────────────────────────────────────────────────────────
@@ -1320,15 +1445,85 @@ function renderHandHistory() {
 function renderNarratives() {
   const el = document.getElementById('narrative-list');
   if (!state.narratives.length) {
-    el.innerHTML = '<div class="empty-state">No narratives yet</div>';
+    el.innerHTML = '<div class="empty-state">No narratives yet — play hands to seed</div>';
     return;
   }
-  el.innerHTML = state.narratives.slice(0,30).map(n => `
-    <div class="narrative-entry">
-      <div class="narrative-meta">Hand #${n.hand_num || '?'} · ${n.ts || ''}</div>
+  el.innerHTML = state.narratives.slice(0,30).map(n => {
+    const wu = n.weight_updates || {};
+    const tags = [];
+    if (wu.carryBoost > 0)   tags.push(`<span style="color:var(--warning);font-size:9px">⚡ carry+${wu.carryBoost.toFixed(1)}</span>`);
+    if (wu.jeezyWarning)     tags.push(`<span style="color:var(--danger);font-size:9px">⚠ DANGER</span>`);
+    if (wu.allinWarning)     tags.push(`<span style="color:var(--danger);font-size:9px">🚨 ALL-IN</span>`);
+    if (wu.hotCards?.length) tags.push(`<span style="color:var(--accent);font-size:9px">🔥 ${wu.hotCards.join(' ')}</span>`);
+    const statsLine = (n.live_wr || n.carry_rate)
+      ? `<div style="font-size:9px;color:var(--text-3);margin-top:2px">WR: ${n.live_wr||'—'}% · Carry: ${n.carry_rate||'—'}%</div>`
+      : '';
+    return `<div class="narrative-entry">
+      <div class="narrative-meta">Hand #${n.hand_num||'?'} · ${n.ts||''} ${tags.join(' ')}</div>
       <div class="narrative-text">${n.next_hand || n.text || ''}</div>
+      ${statsLine}
+    </div>`;
+  }).join('');
+}
+
+// ── KNOWLEDGE PANEL ───────────────────────────────────────────────────────────
+function renderKnowledge() {
+  const el = document.getElementById('knowledge-list');
+  if (!el) return;
+
+  const wu = state.lastWeightUpdate;
+  const mem0Count = state.mem0List?.length || 0;
+  const narrativeCount = state.narratives.length;
+
+  let html = '';
+
+  // Current model patch state
+  const patch = state.raw?.model_patch || {};
+  html += `<div style="margin-bottom:10px">
+    <div class="panel-label" style="margin-bottom:6px">Active Model Patch</div>
+    <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-2)">
+      <div>carryBoost: <span style="color:${(patch.carryBoost||0)>0?'var(--warning)':'var(--text-3)'}">${patch.carryBoost||0}</span></div>
+      <div>dangerWarning: <span style="color:${patch.jeezyWarning?'var(--danger)':'var(--text-3)'}">${patch.jeezyWarning||false}</span></div>
+      <div>allinWarning: <span style="color:${patch.allinWarning?'var(--danger)':'var(--text-3)'}">${patch.allinWarning||false}</span></div>
+      <div>hotCards: <span style="color:var(--accent)">${(patch.hotCards||[]).join(' ')||'—'}</span></div>
     </div>
-  `).join('');
+  </div>`;
+
+  // Memory system status
+  html += `<div style="margin-bottom:10px">
+    <div class="panel-label" style="margin-bottom:6px">Memory System</div>
+    <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-2)">
+      <div>Mem0 memories stored: <span style="color:var(--accent)">${mem0Count}</span></div>
+      <div>Narratives generated: <span style="color:var(--accent)">${narrativeCount}</span></div>
+      <div>Letta status: <span style="color:var(--warning)">Claude fallback (Letta pending)</span></div>
+    </div>
+  </div>`;
+
+  // Last weight update details
+  if (wu) {
+    html += `<div style="margin-bottom:10px">
+      <div class="panel-label" style="margin-bottom:6px">Last Between-Hands Update</div>
+      <div style="font-size:11px;color:var(--warning);line-height:1.5;margin-bottom:6px">${wu.next_hand||'—'}</div>
+      <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-3)">
+        Hand #${wu.hand_num||'?'} · WR: ${wu.live_wr||'—'}% · Carry: ${wu.carry_rate||'—'}%
+        ${wu.danger_players?.length ? `<br>Danger players: ${wu.danger_players.join(', ')}` : ''}
+      </div>
+    </div>`;
+  }
+
+  // How the loop works
+  html += `<div>
+    <div class="panel-label" style="margin-bottom:6px">Learning Loop</div>
+    <div style="font-size:10px;color:var(--text-3);line-height:1.6">
+      DOM → Extension → /raw → Dashboard<br>
+      Hand ends → /hand → Mem0 store<br>
+      Mem0 retrieval → Claude analysis<br>
+      weight_updates → model.js patch<br>
+      → Next hand decisions updated
+    </div>
+  </div>`;
+
+  el.innerHTML = html;
 }
 
 // ── MEM0 ──────────────────────────────────────────────────────────────────────
@@ -1452,6 +1647,12 @@ document.getElementById('upload-input').addEventListener('change', async e => {
 connectWS();
 loadInitialState();
 loadNarratives();
+renderKnowledge();
+
+// Poll narratives every 5 seconds to catch new between-hands results
+setInterval(loadNarratives, 5000);
+// Refresh knowledge panel every 10 seconds
+setInterval(renderKnowledge, 10000);
 </script>
 </body>
 </html>

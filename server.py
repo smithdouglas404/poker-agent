@@ -72,6 +72,7 @@ def init_db():
         db.executescript("""
         CREATE TABLE IF NOT EXISTS hands (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id     TEXT,
             session_id  TEXT,
             hand_num    INTEGER,
             hole_cards  TEXT,
@@ -86,17 +87,19 @@ def init_db():
             ts           TEXT    DEFAULT (datetime('now'))
         );
 
-
         CREATE TABLE IF NOT EXISTS mem0_log (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id     TEXT,
             session_id  TEXT,
             hand_num    INTEGER,
             memory_text TEXT,
             memory_id   TEXT,
             ts          TEXT DEFAULT (datetime('now'))
         );
+
         CREATE TABLE IF NOT EXISTS claude_log (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id     TEXT,
             session_id  TEXT,
             hand_num    INTEGER,
             prompt      TEXT,
@@ -104,8 +107,10 @@ def init_db():
             next_hand   TEXT,
             ts          TEXT DEFAULT (datetime('now'))
         );
+
         CREATE TABLE IF NOT EXISTS analysis_log (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id         TEXT,
             ts              TEXT DEFAULT (datetime('now')),
             hands_at_time   INTEGER,
             mem0_count      INTEGER,
@@ -117,21 +122,74 @@ def init_db():
             memories_snapshot TEXT,
             claude_narrative  TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS player_hands (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id          TEXT NOT NULL,
+            hand_num         INTEGER,
+            player_name      TEXT,
+            seat_pos         INTEGER,
+            is_hero          INTEGER DEFAULT 0,
+            stack_start      INTEGER DEFAULT 0,
+            preflop_bet      INTEGER DEFAULT 0,
+            flop_bet         INTEGER DEFAULT 0,
+            turn_bet         INTEGER DEFAULT 0,
+            river_bet        INTEGER DEFAULT 0,
+            vpip             INTEGER DEFAULT 0,
+            pfr              INTEGER DEFAULT 0,
+            three_bet        INTEGER DEFAULT 0,
+            four_bet_plus    INTEGER DEFAULT 0,
+            aggressive_acts  INTEGER DEFAULT 0,
+            passive_acts     INTEGER DEFAULT 0,
+            folded           INTEGER DEFAULT 0,
+            all_in           INTEGER DEFAULT 0,
+            won              INTEGER DEFAULT 0,
+            went_to_showdown INTEGER DEFAULT 0,
+            saw_flop         INTEGER DEFAULT 0,
+            shown_cards      TEXT DEFAULT '[]',
+            hand_message     TEXT DEFAULT '',
+            dom_wins         INTEGER DEFAULT 0,
+            ts               TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS player_stats (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id         TEXT NOT NULL,
+            player_name     TEXT NOT NULL,
+            hands_seen      INTEGER DEFAULT 0,
+            vpip_count      INTEGER DEFAULT 0,
+            pfr_count       INTEGER DEFAULT 0,
+            threebet_count  INTEGER DEFAULT 0,
+            fourbet_count   INTEGER DEFAULT 0,
+            total_agg       INTEGER DEFAULT 0,
+            total_passive   INTEGER DEFAULT 0,
+            win_count       INTEGER DEFAULT 0,
+            showdown_count  INTEGER DEFAULT 0,
+            showdown_wins   INTEGER DEFAULT 0,
+            saw_flop_count  INTEGER DEFAULT 0,
+            allin_count     INTEGER DEFAULT 0,
+            dom_win_count   INTEGER DEFAULT 0,
+            commentary      TEXT    DEFAULT '',
+            ts_updated      TEXT    DEFAULT (datetime('now')),
+            UNIQUE(game_id, player_name)
+        );
         """)
-    # Migrate existing DBs — safe no-op if columns already exist
-    for col, typedef in [
-        ("away_mode",    "INTEGER DEFAULT 0"),
-        ("shown_hands",  "TEXT DEFAULT '{}'"),
-        ("player_stats", "TEXT DEFAULT '{}'"),
-    ]:
-        try:
-            db.execute(f"ALTER TABLE hands ADD COLUMN {col} {typedef}")
-        except Exception:
-            pass
-    try:
-        db.execute("ALTER TABLE claude_log ADD COLUMN next_hand TEXT")
-    except Exception:
-        pass
+    # Safe migrations for existing DBs
+    migrations = [
+        ("hands",        "game_id",      "TEXT"),
+        ("mem0_log",     "game_id",      "TEXT"),
+        ("claude_log",   "game_id",      "TEXT"),
+        ("analysis_log", "game_id",      "TEXT"),
+        ("hands",        "shown_hands",  "TEXT DEFAULT '{}'"),
+        ("hands",        "player_stats", "TEXT DEFAULT '{}'"),
+        ("claude_log",   "next_hand",    "TEXT"),
+    ]
+    with get_db() as db:
+        for table, col, typedef in migrations:
+            try:
+                db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {typedef}")
+            except Exception:
+                pass
 
 init_db()
 
@@ -160,29 +218,22 @@ async def start_queue():
 
 # ── Models ────────────────────────────────────────────────────────────────────
 class HandData(BaseModel):
-    session_id: str
-    hand_num: int
-    hole_cards: list
-    board: list = []
-    flop: list = []
-    turn: list = []
-    river: list = []
-    hero_won: bool = False
-    hero_folded: bool = False
-    all_in: bool = False
-    away_mode: bool = False
-    pot: int = 0
-    shown_hands: dict = {}
-    winner: str = ""
-
-class AdviceRequest(BaseModel):
-    session_id: str
-    hand_num: int
-    hole_cards: list
-    board: list
-    pot: int = 0
-    players_in: int = 2
-    facing_bet: int = 0
+    session_id:      str
+    game_id:         str = ""
+    hand_num:        int
+    hole_cards:      list
+    board:           list = []
+    flop:            list = []
+    turn:            list = []
+    river:           list = []
+    hero_won:        bool = False
+    hero_folded:     bool = False
+    all_in:          bool = False
+    away_mode:       bool = False
+    pot:             int  = 0
+    shown_hands:     dict = {}
+    winner:          str  = ""
+    players_in_hand: list = []   # full per-player HUD data for this hand
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def compute_stats(hand_rows):
@@ -234,135 +285,84 @@ def get_analysis_history(db, limit=5):
 async def log_hand(data: HandData):
     mem0_id = None
     memory_text = ""
+    game_id = data.game_id or data.session_id
     try:
-        # Merge flop/turn/river into flat board if not already provided
         board = data.board if data.board else (data.flop + data.turn + data.river)
-
         with get_db() as db:
             db.execute(
-                "INSERT INTO hands (session_id,hand_num,hole_cards,board,hero_won,hero_folded,all_in,pot,away_mode,shown_hands,player_stats) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                (data.session_id, data.hand_num,
+                "INSERT INTO hands (game_id,session_id,hand_num,hole_cards,board,hero_won,hero_folded,all_in,pot,away_mode,shown_hands,player_stats) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                (game_id, data.session_id, data.hand_num,
                  json.dumps(data.hole_cards), json.dumps(board),
-                 int(data.hero_won), int(data.hero_folded),
-                 int(data.all_in), data.pot,
-                 int(data.away_mode),
-                 json.dumps(data.shown_hands),
-                 json.dumps(data.player_stats if hasattr(data, 'player_stats') else {}))
+                 int(data.hero_won), int(data.hero_folded), int(data.all_in),
+                 data.pot, int(data.away_mode), json.dumps(data.shown_hands),
+                 json.dumps(data.players_in_hand))
             )
+            for p in data.players_in_hand:
+                db.execute(
+                    "INSERT INTO player_hands (game_id,hand_num,player_name,seat_pos,is_hero,stack_start,preflop_bet,flop_bet,turn_bet,river_bet,vpip,pfr,three_bet,four_bet_plus,aggressive_acts,passive_acts,folded,all_in,won,went_to_showdown,saw_flop,shown_cards,hand_message,dom_wins) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (game_id, data.hand_num,
+                     p.get("player_name",""), p.get("seat_pos",0), p.get("is_hero",0),
+                     p.get("stack_start",0), p.get("preflop_bet",0), p.get("flop_bet",0),
+                     p.get("turn_bet",0), p.get("river_bet",0),
+                     p.get("vpip",0), p.get("pfr",0), p.get("three_bet",0),
+                     p.get("four_bet_plus",0), p.get("aggressive_acts",0), p.get("passive_acts",0),
+                     p.get("folded",0), p.get("all_in",0), p.get("won",0),
+                     p.get("went_to_showdown",0), p.get("saw_flop",0),
+                     p.get("shown_cards","[]"), p.get("hand_message",""), p.get("dom_wins",0))
+                )
+                db.execute(
+                    """INSERT INTO player_stats (game_id,player_name,hands_seen,vpip_count,pfr_count,threebet_count,fourbet_count,total_agg,total_passive,win_count,showdown_count,showdown_wins,saw_flop_count,allin_count,dom_win_count)
+                    VALUES(?,?,1,?,?,?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(game_id,player_name) DO UPDATE SET
+                        hands_seen=player_stats.hands_seen+1,
+                        vpip_count=player_stats.vpip_count+excluded.vpip_count,
+                        pfr_count=player_stats.pfr_count+excluded.pfr_count,
+                        threebet_count=player_stats.threebet_count+excluded.threebet_count,
+                        fourbet_count=player_stats.fourbet_count+excluded.fourbet_count,
+                        total_agg=player_stats.total_agg+excluded.total_agg,
+                        total_passive=player_stats.total_passive+excluded.total_passive,
+                        win_count=player_stats.win_count+excluded.win_count,
+                        showdown_count=player_stats.showdown_count+excluded.showdown_count,
+                        showdown_wins=player_stats.showdown_wins+excluded.showdown_wins,
+                        saw_flop_count=player_stats.saw_flop_count+excluded.saw_flop_count,
+                        allin_count=player_stats.allin_count+excluded.allin_count,
+                        dom_win_count=MAX(player_stats.dom_win_count,excluded.dom_win_count),
+                        ts_updated=datetime('now')""",
+                    (game_id, p.get("player_name",""),
+                     p.get("vpip",0), p.get("pfr",0), p.get("three_bet",0),
+                     p.get("four_bet_plus",0), p.get("aggressive_acts",0), p.get("passive_acts",0),
+                     p.get("won",0), p.get("went_to_showdown",0),
+                     1 if (p.get("won",0) and p.get("went_to_showdown",0)) else 0,
+                     p.get("saw_flop",0), p.get("all_in",0), p.get("dom_wins",0))
+                )
 
-        result    = "WON" if data.hero_won else ("FOLDED" if data.hero_folded else "LOST")
-        mode      = "[AWAY]" if data.away_mode else ""
-        board_str = " ".join(board) if board else "no board"
-        memory_text = (
-            f"Hand #{data.hand_num} {mode}: hero held {' '.join(data.hole_cards) if data.hole_cards else 'N/A (away)'}, "
-            f"board: {board_str}, result: {result}, pot: {data.pot}, all_in: {data.all_in}"
-        )
+        result = "WON" if data.hero_won else ("FOLDED" if data.hero_folded else "LOST")
+        mode   = "[AWAY]" if data.away_mode else ""
+        memory_text = (f"Hand #{data.hand_num} {mode}: hero held {' '.join(data.hole_cards) if data.hole_cards else 'N/A'}, "
+                       f"board: {' '.join(board) if board else 'no board'}, result: {result}, pot: {data.pot}, all_in: {data.all_in}")
         if data.shown_hands:
-            shown_str = ", ".join(f"{p}: {' '.join(c)}" for p,c in data.shown_hands.items())
-            memory_text += f", opponents showed: {shown_str}"
+            memory_text += f", opponents showed: {', '.join(f'{p}: {chr(32).join(c)}' for p,c in data.shown_hands.items())}"
 
         mem0 = get_mem0()
-        result_mem = mem0.add(
-            memory_text,
-            user_id=USER_ID,
-            metadata={"hand_num": data.hand_num, "session": data.session_id,
-                      "hero_won": data.hero_won, "all_in": data.all_in}
-        )
+        result_mem = mem0.add(memory_text, user_id=USER_ID,
+                              metadata={"hand_num": data.hand_num, "game_id": game_id, "hero_won": data.hero_won})
         mem0_id = result_mem.get("id") if isinstance(result_mem, dict) else None
-
         with get_db() as db:
-            db.execute(
-                "INSERT INTO mem0_log (session_id,hand_num,memory_text,memory_id) VALUES(?,?,?,?)",
-                (data.session_id, data.hand_num, memory_text, str(mem0_id))
-            )
+            db.execute("INSERT INTO mem0_log (game_id,session_id,hand_num,memory_text,memory_id) VALUES(?,?,?,?,?)",
+                       (game_id, data.session_id, data.hand_num, memory_text, str(mem0_id)))
 
-        # Auto-enqueue Claude analysis — server handles it, no need for /between_hands call
         await _claude_queue.put({
-            "session_id":  data.session_id,
-            "hand_num":    data.hand_num,
-            "hole_cards":  data.hole_cards,
-            "flop":        data.flop,
-            "turn":        data.turn,
-            "river":       data.river,
-            "hero_won":    data.hero_won,
-            "hero_folded": data.hero_folded,
-            "all_in":      data.all_in,
-            "away_mode":   data.away_mode,
-            "pot":         data.pot,
-            "shown_hands": data.shown_hands,
+            "session_id": data.session_id, "game_id": game_id,
+            "hand_num": data.hand_num, "hole_cards": data.hole_cards,
+            "flop": data.flop, "turn": data.turn, "river": data.river,
+            "hero_won": data.hero_won, "hero_folded": data.hero_folded,
+            "all_in": data.all_in, "away_mode": data.away_mode,
+            "pot": data.pot, "shown_hands": data.shown_hands,
+            "player_stats": {p["player_name"]: p for p in data.players_in_hand},
         })
-
     except Exception as e:
         return {"ok": False, "error": str(e)}
-
     return {"ok": True, "mem0_id": mem0_id, "memory": memory_text}
-
-# ── POST /advice ──────────────────────────────────────────────────────────────
-@app.post("/advice")
-async def get_advice(data: AdviceRequest):
-    try:
-        # Search Mem0 for relevant patterns
-        mem0   = get_mem0()
-        client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-
-        query = f"hero {' '.join(data.hole_cards)} board {' '.join(data.board)}"
-        mem_results = mem0.search(query=query, filters={"user_id": USER_ID}, limit=6)
-        memories = [m.get("memory","") for m in (mem_results if isinstance(mem_results, list) else [])]
-
-        # Pull last analysis for context
-        with get_db() as db:
-            last_analysis = db.execute(
-                "SELECT claude_narrative FROM analysis_log ORDER BY ts DESC LIMIT 1"
-            ).fetchone()
-        analysis_ctx = last_analysis["claude_narrative"][:500] if last_analysis else "No analysis run yet"
-
-        system = """You are a real-time poker advisor for a PokerNow game with a known broken RNG.
-
-PROVEN FACTS about this game:
-- Hero (Poo-PokerNow) wins 67.5% of hands played — 2.7x expected
-- Speculative/weak hands win 83% — NEVER fold preflop
-- Premium hands only win 50% — do not over-value AA/KK
-- All-in = river WILL complete someone's draw (54% rate)
-- Carry rate accelerates late session: hands 300+ = 60-67% carry
-- Jeezy333 wins 68.9% at showdown — fold to their aggression postflop
-- Wick3 wins 69.0% at showdown — fold to their aggression postflop  
-- Thanos goes all-in 14% of hands, chip feeder, call them
-- 4 cards same suit on board without your flush = CHECK/FOLD
-- High card is suppressed — almost everyone has at least a pair
-
-Respond with: ACTION (FOLD/CHECK/CALL/BET/RAISE), sizing if bet/raise, and 1-2 sentence reason."""
-
-        prompt = f"""Current hand:
-Hole cards: {data.hole_cards}
-Board: {data.board if data.board else 'preflop'}
-Pot: {data.pot}, Facing bet: {data.facing_bet}, Players in: {data.players_in}
-
-Relevant Mem0 memories from similar past hands:
-{chr(10).join(f'- {m}' for m in memories) if memories else '- none yet'}
-
-Last analysis summary: {analysis_ctx}
-
-What is the best action?"""
-
-        resp = client.messages.create(
-            model="claude-sonnet-4-5",
-            max_tokens=300,
-            system=system,
-            messages=[{"role":"user","content":prompt}]
-        )
-        advice = resp.content[0].text
-
-        with get_db() as db:
-            db.execute(
-                "INSERT INTO claude_log (session_id,hand_num,prompt,response) VALUES(?,?,?,?)",
-                (data.session_id, data.hand_num, prompt, advice)
-            )
-
-        return {"ok": True, "advice": advice, "memories_used": len(memories)}
-
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
 
 # ── GET /analyze — full analysis, stores result historically ──────────────────
 @app.get("/analyze")
@@ -394,34 +394,29 @@ async def analyze():
 
         mem_block = "\n".join(f"- {m}" for m in memories) if memories else "No memories yet"
 
-        prompt = f"""You are analyzing a PokerNow game with a broken RNG shuffle.
+        prompt = f"""You are analyzing a PokerNow game with a suspected broken RNG shuffle.
 
-CURRENT LIVE STATS ({stats.get('total',0)} hands logged by extension):
+LIVE STATS FROM THIS SESSION ({stats.get('total',0)} hands logged):
 - Win rate: {stats.get('win_rate',0)}%
 - All-in win rate: {stats.get('allin_wr',0)}%
-- Carry rate: {stats.get('carry_rate',0)}%
-- Street wins: {stats.get('street_wins',{})}
-- Street totals: {stats.get('street_totals',{})}
+- Carry rate (cards bleeding between hands): {stats.get('carry_rate',0)}%
+- Street breakdown wins: {stats.get('street_wins',{})}
+- Street breakdown totals: {stats.get('street_totals',{})}
 
-ALL MEM0 MEMORIES ({len(memories)} total — every hand the extension saw):
+ALL MEM0 MEMORIES ({len(memories)} total — every hand recorded):
 {mem_block}
-
-HISTORICAL BASELINE (423-hand CSV pre-extension):
-- Hero win rate: 67.5% | Speculative hands: 83% | Premium: 50%
-- All-in river completion: 54% | Carry 300+ hands: 60-67%
-- Jeezy333: 68.9% showdown WR | Wick3: 69.0% | Thanos: chip feeder
 
 {prev_ctx}
 
-Provide a detailed analysis covering:
-1. How live play compares to the 423-hand baseline — is the rigged pattern holding?
-2. New patterns emerging from Mem0 memories not visible in the CSV
-3. Any player-specific tendencies captured in memories
-4. Updated carry/board patterns
-5. Specific strategic adjustments for next session
-6. Confidence level (%) that the RNG is broken
+Based only on the actual data above (no assumptions), provide analysis covering:
+1. Win rate pattern — is it statistically anomalous vs expected ~50%?
+2. Carry rate pattern — what does it suggest about the shuffle?
+3. All-in outcomes — any pattern?
+4. Player-specific tendencies found in memories
+5. Specific strategic adjustments for next session based on real patterns observed
+6. Confidence level (%) that shuffle anomalies exist, and why
 
-Be specific, reference actual hands from memory where possible."""
+Reference specific hands from memory where possible. Do not assume anything not in the data."""
 
         resp = client.messages.create(
             model="claude-sonnet-4-5",
@@ -514,12 +509,12 @@ async def proof(session_id: str):
             "WHERE session_id=? ORDER BY ts DESC", (session_id,)
         ).fetchall()
         claude_entries = db.execute(
-            "SELECT hand_num,response,ts FROM claude_log "
+            "SELECT hand_num,response,next_hand,ts FROM claude_log "
             "WHERE session_id=? ORDER BY ts DESC LIMIT 10", (session_id,)
         ).fetchall()
     return {
-        "session_id": session_id,
-        "mem0_entries": [dict(r) for r in mem0_entries],
+        "session_id":    session_id,
+        "mem0_entries":  [dict(r) for r in mem0_entries],
         "claude_entries": [dict(r) for r in claude_entries],
     }
 
@@ -564,44 +559,88 @@ async def health():
 
 # ── Core Claude analysis function (called by queue) ──────────────────────────
 async def _run_between_hands(data_dict: dict):
+    """
+    Between-hands analysis using Letta (persistent agent) + Mem0 (retrieval).
+
+    Architecture:
+    - Mem0 = retrieval layer: stores every hand, searched for similar past hands
+    - Letta = reasoning layer: persistent agent with core memory, uses Mem0, calls Claude internally
+    - Claude = LLM inside Letta (not called directly here when Letta is available)
+    - Returns weight_updates that get pushed to dashboard via WebSocket and patched onto model.js
+
+    weight_updates flow:
+    Letta response → weight_updates → WebSocket broadcast → dashboard applies to model
+    → affects next hand's getAdvice() decisions (carryBoost, hotCards, allinWarning, dangerActive)
+    """
     try:
-        session_id = data_dict.get("session_id","")
-        hand_num   = data_dict.get("hand_num", 0)
-        hole_cards = data_dict.get("hole_cards", [])
-        flop       = data_dict.get("flop", [])
-        turn       = data_dict.get("turn", [])
-        river      = data_dict.get("river", [])
-        hero_won   = data_dict.get("hero_won", False)
-        hero_folded= data_dict.get("hero_folded", False)
-        all_in     = data_dict.get("all_in", False)
-        away_mode  = data_dict.get("away_mode", False)
-        pot        = data_dict.get("pot", 0)
-        shown_hands= data_dict.get("shown_hands", {})
+        session_id  = data_dict.get("session_id","")
+        hand_num    = data_dict.get("hand_num", 0)
+        hole_cards  = data_dict.get("hole_cards", [])
+        flop        = data_dict.get("flop", [])
+        turn        = data_dict.get("turn", [])
+        river       = data_dict.get("river", [])
+        hero_won    = data_dict.get("hero_won", False)
+        hero_folded = data_dict.get("hero_folded", False)
+        all_in      = data_dict.get("all_in", False)
+        away_mode   = data_dict.get("away_mode", False)
+        pot         = data_dict.get("pot", 0)
+        shown_hands = data_dict.get("shown_hands", {})
+        player_stats= data_dict.get("player_stats", {})
 
         board = flop + turn + river
         mem0  = get_mem0()
-        client= anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
+        # ── Step 1: Mem0 retrieval — find similar past hands ──────────────────
         query = f"{' '.join(hole_cards)} {' '.join(board)}"
         mem_results = mem0.search(query=query, filters={"user_id": USER_ID}, limit=8)
         memories = [m.get("memory","") for m in (mem_results if isinstance(mem_results, list) else [])]
 
+        # ── Step 2: Pull live stats from DB — no hardcoded numbers ────────────
         with get_db() as db:
-            last_analysis = db.execute(
+            last_analysis  = db.execute(
                 "SELECT claude_narrative, hands_at_time FROM analysis_log ORDER BY ts DESC LIMIT 1"
             ).fetchone()
-            recent_hands = db.execute(
+            recent_hands   = db.execute(
                 "SELECT hole_cards, board, hero_won, all_in FROM hands ORDER BY id DESC LIMIT 10"
             ).fetchall()
+            total_hands    = db.execute("SELECT COUNT(*) FROM hands").fetchone()[0]
+            hero_won_count = db.execute("SELECT COUNT(*) FROM hands WHERE hero_won=1").fetchone()[0]
+            allin_count    = db.execute("SELECT COUNT(*) FROM hands WHERE all_in=1").fetchone()[0]
+            allin_won      = db.execute("SELECT COUNT(*) FROM hands WHERE all_in=1 AND hero_won=1").fetchone()[0]
+            # Carry rate from recent hands
+            recent_all     = db.execute(
+                "SELECT hole_cards, board FROM hands ORDER BY id DESC LIMIT 50"
+            ).fetchall()
 
-        analysis_ctx = last_analysis["claude_narrative"][:300] if last_analysis else ""
-        recent = [dict(r) for r in recent_hands]
+        live_wr      = round(hero_won_count/total_hands*100, 1) if total_hands > 0 else 0
+        allin_wr     = round(allin_won/allin_count*100, 1)      if allin_count  > 0 else 0
+        analysis_ctx = last_analysis["claude_narrative"][:300]   if last_analysis else ""
+        recent       = [dict(r) for r in recent_hands]
+
+        # Compute carry rate from last 50 hands
+        carry_pairs = 0
+        recent_list = [dict(r) for r in recent_all]
+        for i in range(1, len(recent_list)):
+            prev_board = json.loads(recent_list[i-1].get("board","[]") or "[]")
+            curr_hole  = json.loads(recent_list[i].get("hole_cards","[]") or "[]")
+            curr_board = json.loads(recent_list[i].get("board","[]") or "[]")
+            if set(prev_board) & set(curr_hole + curr_board):
+                carry_pairs += 1
+        carry_rate = round(carry_pairs / max(len(recent_list)-1, 1) * 100, 1)
+
+        # Danger players from live player_stats
+        danger_players = [p for p,s in player_stats.items()
+                         if s.get("showdowns",0) >= 3 and s.get("winRate",0) >= 60]
 
         result_str = "WON" if hero_won else ("FOLDED" if hero_folded else "LOST")
         mode_str   = " [HERO AWAY]" if away_mode else ""
         shown_str  = ", ".join(f"{p}: {' '.join(c)}" for p,c in shown_hands.items()) if shown_hands else "none"
 
-        prompt = f"""A poker hand just completed. Analyze it and prepare the player for the NEXT hand.
+        # ── Step 3: Build prompt for Letta/Claude ─────────────────────────────
+        # Letta (when integrated) will use this as its reasoning input.
+        # Letta maintains core memory (danger players, carry patterns, session state)
+        # and queries Mem0 automatically. Until Letta is deployed, Claude gets this directly.
+        prompt = f"""You are a persistent poker analysis agent with memory of this entire session.
 
 COMPLETED HAND #{hand_num}{mode_str}:
 - Hero held: {' '.join(hole_cards) if hole_cards else 'N/A (away)'}
@@ -609,49 +648,76 @@ COMPLETED HAND #{hand_num}{mode_str}:
 - Result: {result_str} | Pot: {pot} | All-in: {all_in}
 - Opponents showed: {shown_str}
 
-RELEVANT MEM0 MEMORIES:
+LIVE SESSION STATS (actual database values — not assumptions):
+- Total hands: {total_hands} | Win rate: {live_wr}% | All-in win rate: {allin_wr}%
+- Carry rate (last 50 hands): {carry_rate}%
+- Danger players (60%+ win rate, 3+ showdowns): {danger_players if danger_players else 'none detected yet'}
+
+MEM0 MEMORIES — similar past hands retrieved:
 {chr(10).join(f'- {m}' for m in memories) if memories else '- none yet'}
 
-RECENT HAND TREND (last 10):
+RECENT TREND (last 5 hands):
 {chr(10).join(f"  hole:{r['hole_cards']} board:{r['board']} won:{r['hero_won']}" for r in recent[:5])}
 
-LAST ANALYSIS SUMMARY: {analysis_ctx}
+LAST ANALYSIS: {analysis_ctx}
 
-PROVEN FACTS: Hero wins 67.5% overall. Speculative hands win 83%. Never fold preflop.
-Jeezy/Wick3 win 69% at showdown — fold to their postflop aggression.
-All-in = river completes draws 54%. Carry rate accelerates 300+ hands.
-
-Respond in JSON only:
+Based ONLY on actual data above, respond in JSON:
 {{
-  "nextHand": "1-2 sentence instruction for what to do NEXT hand — specific action advice based on carry patterns, danger players, and board trends. Forward looking only.",
+  "nextHand": "1-2 sentence forward-looking instruction for NEXT hand. Specific. Based on real patterns only.",
   "weight_updates": {{
     "carryBoost": 0.0,
-    "jeezyWarning": true,
-    "allinWarning": true,
+    "jeezyWarning": false,
+    "allinWarning": false,
     "hotCards": []
   }}
-}}"""
+}}
 
-        resp = client.messages.create(
+weight_updates rules:
+- carryBoost: float 0.0-2.0, raise if carry rate > 40% or strong carry pattern detected
+- jeezyWarning: true if any danger player (60%+ win rate) is likely in next hand
+- allinWarning: true if all-in rate > 15% or pattern suggests all-in likely
+- hotCards: list of card strings ["A♠","K♥"] that appeared frequently in winning hands from memories"""
+
+        # ── Step 4: Call Claude (Letta will replace this call when deployed) ──
+        client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+        resp   = client.messages.create(
             model="claude-sonnet-4-5",
             max_tokens=400,
             messages=[{"role":"user","content":prompt}]
         )
         raw    = resp.content[0].text.strip().replace('```json','').replace('```','').strip()
         parsed = json.loads(raw)
-        next_hand_text = parsed.get("nextHand","")
+        next_hand_text  = parsed.get("nextHand","")
+        weight_updates  = parsed.get("weight_updates", {})
 
+        # ── Step 5: Store observation back to Mem0 ────────────────────────────
         mem0.add(
-            f"Hand #{hand_num} next hand: {next_hand_text}",
+            f"Hand #{hand_num} analysis: {next_hand_text}",
             user_id=USER_ID,
-            metadata={"type":"between_hands","hand_num":hand_num}
+            metadata={"type":"between_hands","hand_num":hand_num,"session":session_id}
         )
 
+        # ── Step 6: Store to claude_log ───────────────────────────────────────
         with get_db() as db:
             db.execute(
                 "INSERT INTO claude_log (session_id,hand_num,prompt,response,next_hand) VALUES(?,?,?,?,?)",
                 (session_id, hand_num, prompt[:500], raw, next_hand_text)
             )
+
+        # ── Step 7: Push weight_updates + narrative to dashboard via WebSocket ─
+        # Dashboard receives this, applies weight_updates to local model,
+        # which affects next hand's getAdvice() decisions
+        await manager.broadcast(session_id, {
+            "type": "weight_updates",
+            "data": {
+                "hand_num":       hand_num,
+                "next_hand":      next_hand_text,
+                "weight_updates": weight_updates,
+                "carry_rate":     carry_rate,
+                "live_wr":        live_wr,
+                "danger_players": danger_players,
+            }
+        })
 
         return parsed
 
@@ -755,11 +821,14 @@ class RawData(BaseModel):
 @app.post("/raw")
 async def post_raw(data: RawData):
     payload = data.dict()
-    # Add server status
     try:
         with get_db() as db:
             hc = db.execute("SELECT COUNT(*) FROM hands").fetchone()[0]
-        payload["server_status"] = {"hands_logged": hc, "mem0_live": True, "claude_live": True}
+        payload["server_status"] = {
+            "hands_logged": hc,
+            "mem0_live":    bool(MEM0_API_KEY),
+            "claude_live":  bool(ANTHROPIC_KEY),
+        }
     except Exception:
         payload["server_status"] = {"hands_logged": 0, "mem0_live": False, "claude_live": False}
 
@@ -815,219 +884,35 @@ async def dashboard():
         return HTMLResponse(content=html_path.read_text())
     return HTMLResponse(content="<h1>Dashboard not found. Deploy dashboard.html alongside server.py</h1>", status_code=404)
 
-# ── POST /upload_csv — parse and store CSV from dashboard ─────────────────────
-@app.post("/upload_csv")
-async def upload_csv(request_body: str = ""):
-    from fastapi import Request
-    return {"ok": False, "error": "Use the Request object — see implementation note"}
-
-# Fix upload_csv to actually read body
-from fastapi import Request
-
-@app.post("/upload_csv_v2")
-async def upload_csv_v2(request: Request):
-    try:
-        text = (await request.body()).decode("utf-8")
-        lines = text.strip().split("\n")
-        # Parse hands from CSV
-        hands = []
-        cur = None
-        for line in lines[1:]:
-            m = __import__("re").match(r'^"?(.*?)"?,(\d{4}-\d{2}-\d{2}T[^,]+),(\d+)', line)
-            if not m:
-                continue
-            entry = m.group(1).replace('""', '"')
-            if "-- starting hand" in entry:
-                hm = __import__("re").search(r"starting hand #(\d+)", entry)
-                if hm:
-                    cur = {"hand_num": int(hm.group(1)), "hole_cards": [], "flop": [], "turn": [], "river": []}
-            elif "-- ending hand" in entry:
-                if cur:
-                    hands.append(cur)
-                    cur = None
-            elif cur:
-                cards_re = __import__("re").compile(r'(?:10|[2-9JQKA])[♠♥♦♣]')
-                if "Your hand is" in entry:
-                    cur["hole_cards"] = cards_re.findall(entry)
-                elif entry.startswith("Flop:"):
-                    cur["flop"] = cards_re.findall(entry)
-                elif entry.startswith("Turn:"):
-                    tm = __import__("re").search(r"\[([^\]]+)\]$", entry)
-                    if tm:
-                        cur["turn"] = cards_re.findall(tm.group(1))
-                elif entry.startswith("River:"):
-                    rm = __import__("re").search(r"\[([^\]]+)\]$", entry)
-                    if rm:
-                        cur["river"] = cards_re.findall(rm.group(1))
-
-        # Store to DB + Mem0 in background
-        mem0 = get_mem0()
-        stored = 0
-        with get_db() as db:
-            for h in hands:
-                board = h["flop"] + h["turn"] + h["river"]
-                try:
-                    db.execute(
-                        "INSERT OR IGNORE INTO hands (session_id,hand_num,hole_cards,board) VALUES(?,?,?,?)",
-                        ("csv_upload", h["hand_num"], json.dumps(h["hole_cards"]), json.dumps(board))
-                    )
-                    stored += 1
-                except Exception:
-                    pass
-            await asyncio.gather(
-                asyncio.to_thread(
-                    mem0.add,
-                    f"CSV upload: {len(hands)} historical hands loaded",
-                    user_id=USER_ID,
-                    metadata={"type": "csv_upload", "count": len(hands)}
-                )
-            )
-        return {"ok": True, "hands": stored}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
-
-
-# ── WebSocket ─────────────────────────────────────────────────────────────────
-@app.websocket("/ws/{session_id}")
-async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    await manager.connect(session_id, websocket)
-    if session_id in _latest_state:
-        try:
-            await websocket.send_json({"type": "raw", "data": _latest_state[session_id]})
-        except Exception:
-            pass
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        manager.disconnect(session_id, websocket)
-
-# ── POST /raw ─────────────────────────────────────────────────────────────────
-class RawData(BaseModel):
-    session_id:    str
-    hole_cards:    list = []
-    board_cards:   list = []
-    pot_size:      int  = 0
-    bet_facing:    int  = 0
-    hero_stack:    int  = 0
-    is_hero_turn:  bool = False
-    hero_bet:      int  = 0
-    max_opp_bet:   int  = 0
-    call_amount:   int  = 0
-    aggressor:     str  = ""
-    is_raise:      bool = False
-    is_cold_call:  bool = False
-    can_check:     bool = False
-    win_counts:    dict = {}
-    hand_messages: dict = {}
-    dealer_pos:    int  = 0
-    blinds:        dict = {}
-    shown_hands:   dict = {}
-    shown_winners: list = []
-    away_mode:     bool = False
-    decision:      dict = {}
-    carry_alert:   dict = {}
-    player_stats:  dict = {}
-    danger_players: list = []
-    model_meta:    dict = {}
-
-@app.post("/raw")
-async def post_raw(data: RawData):
-    payload = data.dict()
-    try:
-        with get_db() as db:
-            hc = db.execute("SELECT COUNT(*) FROM hands").fetchone()[0]
-        payload["server_status"] = {"hands_logged": hc, "mem0_live": bool(MEM0_API_KEY), "claude_live": bool(ANTHROPIC_KEY)}
-    except Exception:
-        payload["server_status"] = {"hands_logged": 0, "mem0_live": False, "claude_live": False}
-    _latest_state[data.session_id] = payload
-    await manager.broadcast(data.session_id, {"type": "raw", "data": payload})
-    return {"ok": True}
-
-# ── GET /api/state/{session_id} ───────────────────────────────────────────────
-@app.get("/api/state/{session_id}")
-async def get_state(session_id: str):
-    try:
-        with get_db() as db:
-            narratives = db.execute(
-                "SELECT hand_num, next_hand, ts FROM claude_log "
-                "WHERE session_id=? AND next_hand IS NOT NULL ORDER BY hand_num DESC LIMIT 50",
-                (session_id,)
-            ).fetchall()
-            hands = db.execute(
-                "SELECT hand_num, hole_cards, board, hero_won, hero_folded FROM hands "
-                "WHERE session_id=? ORDER BY id DESC LIMIT 20", (session_id,)
-            ).fetchall()
-            hc = db.execute("SELECT COUNT(*) FROM hands").fetchone()[0]
-        hand_history = []
-        for h in reversed(list(hands)):
-            result = "WON" if h["hero_won"] else ("FOLDED" if h["hero_folded"] else "LOST")
-            hand_history.append({
-                "hand_num": h["hand_num"],
-                "hole":     " ".join(json.loads(h["hole_cards"] or "[]")),
-                "board":    " ".join(json.loads(h["board"] or "[]")),
-                "result":   result,
-                "note":     None,
-                "pending":  False,
-            })
-        latest = _latest_state.get(session_id, {})
-        return {
-            "ok": True,
-            "narratives":   [dict(r) for r in narratives],
-            "hand_history": hand_history,
-            "player_stats": latest.get("player_stats", {}),
-            "server_status": {"hands_logged": hc, "mem0_live": bool(MEM0_API_KEY), "claude_live": bool(ANTHROPIC_KEY)},
-        }
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
-
-# ── GET /dashboard ────────────────────────────────────────────────────────────
-@app.get("/dashboard")
-async def dashboard():
-    from pathlib import Path
-    html_path = Path(__file__).parent / "dashboard.html"
-    if html_path.exists():
-        return HTMLResponse(content=html_path.read_text())
-    return HTMLResponse(content="<h1>Dashboard not found</h1>", status_code=404)
-
-# ── POST /upload_csv ──────────────────────────────────────────────────────────
+# ── POST /upload_csv — parse CSV from dashboard ───────────────────────────────
 from fastapi import Request as FastAPIRequest
 
 @app.post("/upload_csv")
 async def upload_csv(request: FastAPIRequest):
     import re
     try:
-        text = (await request.body()).decode("utf-8")
+        text  = (await request.body()).decode("utf-8")
         lines = text.strip().split("\n")
-        hands = []
-        cur = None
-        card_re = re.compile(r'(?:10|[2-9JQKA])[\u2660\u2665\u2666\u2663]')
+        hands, cur = [], None
+        card_re = re.compile(r'(?:10|[2-9JQKA])[♠♥♦♣]')
         for line in lines[1:]:
             m = re.match(r'^"?(.*?)"?,(\d{4}-\d{2}-\d{2}T[^,]+),(\d+)', line)
-            if not m:
-                continue
-            entry = m.group(1).replace('\"\"',' \"')
+            if not m: continue
+            entry = m.group(1).replace('""', '"')
             if "-- starting hand" in entry:
                 hm = re.search(r"starting hand #(\d+)", entry)
-                if hm:
-                    cur = {"hand_num": int(hm.group(1)), "hole_cards": [], "flop": [], "turn": [], "river": []}
+                if hm: cur = {"hand_num": int(hm.group(1)), "hole_cards": [], "flop": [], "turn": [], "river": []}
             elif "-- ending hand" in entry:
-                if cur:
-                    hands.append(cur)
-                    cur = None
+                if cur: hands.append(cur); cur = None
             elif cur:
-                if "Your hand is" in entry:
-                    cur["hole_cards"] = card_re.findall(entry)
-                elif entry.startswith("Flop:"):
-                    cur["flop"] = card_re.findall(entry)
+                if "Your hand is" in entry: cur["hole_cards"] = card_re.findall(entry)
+                elif entry.startswith("Flop:"): cur["flop"] = card_re.findall(entry)
                 elif entry.startswith("Turn:"):
                     tm = re.search(r"\[([^\]]+)\]$", entry)
-                    if tm:
-                        cur["turn"] = card_re.findall(tm.group(1))
+                    if tm: cur["turn"] = card_re.findall(tm.group(1))
                 elif entry.startswith("River:"):
                     rm = re.search(r"\[([^\]]+)\]$", entry)
-                    if rm:
-                        cur["river"] = card_re.findall(rm.group(1))
+                    if rm: cur["river"] = card_re.findall(rm.group(1))
         stored = 0
         with get_db() as db:
             for h in hands:
@@ -1040,6 +925,153 @@ async def upload_csv(request: FastAPIRequest):
                     stored += 1
                 except Exception:
                     pass
+        try:
+            get_mem0().add(
+                f"CSV upload: {len(hands)} historical hands loaded",
+                user_id=USER_ID,
+                metadata={"type": "csv_upload", "count": len(hands)}
+            )
+        except Exception:
+            pass
         return {"ok": True, "hands": stored}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+# ── GET /player_stats/{game_id} — HUD stats for all players in a game ─────────
+@app.get("/player_stats/{game_id}")
+async def get_player_stats(game_id: str):
+    try:
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT * FROM player_stats WHERE game_id=? ORDER BY hands_seen DESC",
+                (game_id,)
+            ).fetchall()
+        def compute(s):
+            h  = s["hands_seen"]    or 1
+            fl = s["saw_flop_count"] or 1
+            sd = s["showdown_count"] or 1
+            pa = s["total_passive"]  or 1
+            return {
+                **dict(s),
+                "vpip_pct":     round(s["vpip_count"]     / h  * 100, 1),
+                "pfr_pct":      round(s["pfr_count"]      / h  * 100, 1),
+                "threebet_pct": round(s["threebet_count"] / h  * 100, 1),
+                "af":           round(s["total_agg"]      / pa,       2),
+                "wtsd_pct":     round(s["showdown_count"] / fl * 100, 1),
+                "wsd_pct":      round(s["showdown_wins"]  / sd * 100, 1),
+                "win_pct":      round(s["win_count"]      / h  * 100, 1),
+                "allin_pct":    round(s["allin_count"]    / h  * 100, 1),
+            }
+        return {"ok": True, "players": [compute(r) for r in rows]}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+# ── POST /player_narrative — Claude commentary on a specific player ────────────
+class NarrativeRequest(BaseModel):
+    game_id:     str
+    player_name: str
+
+@app.post("/player_narrative")
+async def player_narrative(data: NarrativeRequest):
+    try:
+        with get_db() as db:
+            stats = db.execute(
+                "SELECT * FROM player_stats WHERE game_id=? AND player_name=?",
+                (data.game_id, data.player_name)
+            ).fetchone()
+            recent_hands = db.execute(
+                "SELECT hand_num, preflop_bet, flop_bet, turn_bet, river_bet, vpip, pfr, three_bet, folded, all_in, won, went_to_showdown, shown_cards, hand_message "
+                "FROM player_hands WHERE game_id=? AND player_name=? ORDER BY id DESC LIMIT 15",
+                (data.game_id, data.player_name)
+            ).fetchall()
+
+        if not stats:
+            return {"ok": False, "error": "Player not found"}
+
+        s  = dict(stats)
+        h  = s["hands_seen"]    or 1
+        fl = s["saw_flop_count"] or 1
+        sd = s["showdown_count"] or 1
+        pa = s["total_passive"]  or 1
+
+        vpip    = round(s["vpip_count"]     / h  * 100, 1)
+        pfr     = round(s["pfr_count"]      / h  * 100, 1)
+        threebet= round(s["threebet_count"] / h  * 100, 1)
+        af      = round(s["total_agg"]      / pa,       2)
+        wtsd    = round(s["showdown_count"] / fl * 100, 1)
+        wsd     = round(s["showdown_wins"]  / sd * 100, 1)
+        win_pct = round(s["win_count"]      / h  * 100, 1)
+        allin   = round(s["allin_count"]    / h  * 100, 1)
+
+        # Player profile label
+        if vpip > 40:   ptype = "Loose (fish/recreational)"
+        elif vpip < 15: ptype = "Nit (very tight)"
+        elif pfr > vpip * 0.8: ptype = "Tight-Aggressive (TAG)"
+        else: ptype = "Loose-Aggressive (LAG)"
+
+        af_label = "very passive (bet = strong)" if af < 1.5 else "aggressive (likely bluffing)" if af > 3.0 else "balanced"
+
+        hands_summary = []
+        for h_row in list(recent_hands)[:8]:
+            r = dict(h_row)
+            result = "WON" if r["won"] else ("FOLDED" if r["folded"] else "LOST")
+            hands_summary.append(f"#{r['hand_num']}: {result}, preflop={r['preflop_bet']}, flop={r['flop_bet']}, {r.get('hand_message','')}")
+
+        mem0 = get_mem0()
+        mem_results = mem0.search(query=f"player {data.player_name}", filters={"user_id": USER_ID}, limit=5)
+        memories = [m.get("memory","") for m in (mem_results if isinstance(mem_results, list) else [])]
+
+        prompt = f"""Write a professional 4-5 line poker HUD commentary on this player.
+
+Player: {data.player_name}
+Sample size: {s["hands_seen"]} hands
+
+CORE STATS:
+- VPIP/PFR: {vpip}% / {pfr}% — Profile: {ptype}
+- 3Bet: {threebet}% | AF: {af} ({af_label})
+- WTSD: {wtsd}% | W$SD: {wsd}% | Win rate: {win_pct}%
+- All-in rate: {allin}%
+
+RECENT HANDS (last 8):
+{chr(10).join(hands_summary)}
+
+RELEVANT MEMORIES:
+{chr(10).join(f'- {m}' for m in memories) if memories else '- none yet'}
+
+Write 4-5 lines of specific, actionable commentary covering:
+1. Player type and general tendencies
+2. Pre-flop approach and how to counter
+3. Post-flop tendencies and exploits
+4. One specific strategic recommendation
+
+Be direct and specific. Avoid generic advice. Base everything on the actual stats above."""
+
+        client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+        resp   = client.messages.create(
+            model="claude-sonnet-4-5", max_tokens=300,
+            messages=[{"role":"user","content":prompt}]
+        )
+        commentary = resp.content[0].text.strip()
+
+        # Store commentary back to player_stats
+        with get_db() as db:
+            db.execute(
+                "UPDATE player_stats SET commentary=?, ts_updated=datetime('now') WHERE game_id=? AND player_name=?",
+                (commentary, data.game_id, data.player_name)
+            )
+
+        return {
+            "ok":        True,
+            "player":    data.player_name,
+            "commentary": commentary,
+            "stats": {
+                "vpip": vpip, "pfr": pfr, "threebet": threebet,
+                "af": af, "wtsd": wtsd, "wsd": wsd,
+                "win_pct": win_pct, "allin_pct": allin,
+                "hands_seen": s["hands_seen"],
+                "profile": ptype,
+            }
+        }
     except Exception as e:
         return {"ok": False, "error": str(e)}
