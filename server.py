@@ -589,6 +589,9 @@ def init_db():
             shown_hands  TEXT    DEFAULT '{}',
             player_stats TEXT    DEFAULT '{}',
             player_count INTEGER DEFAULT 0,
+            engine_action TEXT   DEFAULT '',
+            engine_confidence INTEGER DEFAULT 0,
+            engine_hand_strength REAL DEFAULT 0,
             ts           TEXT    DEFAULT (datetime('now')),
             UNIQUE(game_id, hand_num)
         );
@@ -770,6 +773,9 @@ def init_db():
         ("player_stats", "folded_to_cbet",       "INTEGER DEFAULT 0"),
         ("player_stats", "player_id",             "TEXT DEFAULT ''"),
         ("player_hands", "player_id",             "TEXT DEFAULT ''"),
+        ("hands", "engine_action",         "TEXT DEFAULT ''"),
+        ("hands", "engine_confidence",     "INTEGER DEFAULT 0"),
+        ("hands", "engine_hand_strength",  "REAL DEFAULT 0"),
     ]
     with get_db() as db:
         for table, col, typedef in migrations:
@@ -1048,13 +1054,17 @@ async def log_hand(data: HandData):
         board = data.board if data.board else (data.flop + data.turn + data.river)
         with get_db() as db:
             player_count = len(data.players_in_hand)
+            engine_action = data.decision.get('action','') if data.decision else ''
+            engine_confidence = data.decision.get('confidence', 0) if data.decision else 0
+            engine_hand_strength = data.decision.get('handStrength', 0) if data.decision else 0
             db.execute(
-                "INSERT INTO hands (game_id,session_id,hand_num,hole_cards,board,hero_won,hero_folded,all_in,pot,away_mode,shown_hands,player_stats,player_count) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO hands (game_id,session_id,hand_num,hole_cards,board,hero_won,hero_folded,all_in,pot,away_mode,shown_hands,player_stats,player_count,engine_action,engine_confidence,engine_hand_strength) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (game_id, data.session_id, data.hand_num,
                  json.dumps(data.hole_cards), json.dumps(board),
                  int(data.hero_won), int(data.hero_folded), int(data.all_in),
                  data.pot, int(data.away_mode), json.dumps(data.shown_hands),
-                 json.dumps(data.players_in_hand), player_count)
+                 json.dumps(data.players_in_hand), player_count,
+                 engine_action, engine_confidence, engine_hand_strength)
             )
             for p in data.players_in_hand:
                 db.execute(
@@ -1979,6 +1989,37 @@ async def save_player_note(data: PlayerNoteRequest):
                 (data.notes, data.player_id)
             )
         return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+# ── GET /action_win_rates — Live win rates per engine action from all history ─────
+@app.get("/action_win_rates")
+async def get_action_win_rates():
+    try:
+        with get_db() as db:
+            rows = db.execute(
+                """SELECT engine_action, 
+                          COUNT(*) as total,
+                          SUM(hero_won) as wins,
+                          AVG(engine_confidence) as avg_confidence,
+                          AVG(pot) as avg_pot
+                   FROM hands 
+                   WHERE engine_action != '' AND engine_action IS NOT NULL
+                   GROUP BY engine_action
+                   ORDER BY total DESC"""
+            ).fetchall()
+        result = {}
+        for r in rows:
+            total = r["total"] or 1
+            result[r["engine_action"]] = {
+                "total":          r["total"],
+                "wins":           r["wins"] or 0,
+                "win_rate":       round((r["wins"] or 0) / total * 100, 1),
+                "avg_confidence": round(r["avg_confidence"] or 0, 0),
+                "avg_pot":        round(r["avg_pot"] or 0, 0),
+            }
+        return {"ok": True, "action_win_rates": result, 
+                "total_hands": sum(v["total"] for v in result.values())}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 

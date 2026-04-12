@@ -21,7 +21,7 @@
   --f-mono:'SF Mono','Fira Code','Consolas',monospace;
   --f-body:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
-html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font-family:var(--f-body);font-size:12px}
+html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font-family:var(--f-body);font-size:13px;display:flex;flex-direction:column}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 @keyframes snapIn{0%{transform:scale(0.92) translateY(4px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
 @keyframes fadeSlideUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
@@ -54,12 +54,12 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .nav-tab .rbadge{display:inline-block;background:rgba(255,85,85,0.15);color:#ff9b9b;font-size:8px;padding:1px 5px;border-radius:10px;margin-left:5px}
 
 /* LAYOUT */
-#app{display:flex;flex-direction:column;height:calc(100vh - 44px - 40px);overflow:hidden}
+#app{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
 .tab-content{display:none;flex:1;min-height:0;overflow:hidden}
 .tab-content.active{display:flex;flex-direction:column}
 
 /* LIVE TAB */
-#main-grid{display:grid;grid-template-columns:200px 1fr 220px;gap:1px;background:var(--border);flex:1;min-height:0}
+#main-grid{display:grid;grid-template-columns:minmax(180px,200px) 1fr minmax(200px,220px);gap:1px;background:var(--border);flex:1;min-height:0;overflow:hidden}
 .panel{background:var(--bg-panel);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border-md) transparent}
 
 /* DECISION PANEL */
@@ -95,7 +95,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 #equity-bar-wrap{height:3px;background:var(--border-md);border-radius:1px;margin-top:6px;overflow:hidden}
 #pot-odds-fill{height:100%;border-radius:1px;background:var(--green);transition:width 0.5s;width:0%}
 #reasons-list{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
-.reason-item{display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--t2);line-height:1.4}
+.reason-item{display:flex;align-items:flex-start;gap:6px;font-size:12px;color:var(--t2);line-height:1.4}
 .reason-item::before{content:'▸';color:var(--green);flex-shrink:0;font-size:9px;margin-top:2px}
 .reason-item.danger{color:#ff9b9b}.reason-item.danger::before{color:var(--red)}
 #stage-bar{padding:6px 12px;display:flex;gap:3px;border-bottom:1px solid var(--border)}
@@ -212,20 +212,20 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .modal-ask-btn:hover{background:rgba(188,140,255,0.2)}
 
 /* BOTTOM STRIP */
-#bottom-strip{display:grid;grid-template-columns:1fr 1fr 1fr 155px;gap:1px;background:var(--border);height:155px;flex-shrink:0;border-top:1px solid var(--border-md)}
+#bottom-strip{display:grid;grid-template-columns:1fr 1fr 1fr 155px;gap:1px;background:var(--border);min-height:155px;max-height:155px;flex-shrink:0;border-top:1px solid var(--border-md)}
 .b-panel{background:var(--bg-panel);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 .b-panel:last-child{border-right:none}
 .b-panel-content{flex:1;overflow-y:auto;padding:6px 12px}
 .narrative-entry{padding:5px 0;border-bottom:1px solid var(--border);animation:fadeSlideUp 0.3s ease forwards}
 .narrative-entry:last-child{border-bottom:none}
 .narrative-meta{font-family:var(--f-mono);font-size:11px;color:var(--green);margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap}
-.narrative-text{font-size:12px;color:var(--t1);line-height:1.4}
+.narrative-text{font-size:13px;color:var(--t1);line-height:1.4}
 .know-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--border);font-size:12px;animation:fadeSlideUp 0.2s ease forwards}
 .know-row:last-child{border-bottom:none}
-.know-k{font-family:var(--f-mono);font-size:12px;color:var(--t1)}
-.know-v{font-family:var(--f-mono);font-size:12px;color:var(--t1);font-weight:700}
+.know-k{font-family:var(--f-mono);font-size:12px;color:var(--t1);letter-spacing:0.3px}
+.know-v{font-family:var(--f-mono);font-size:13px;color:var(--t1);font-weight:700}
 .know-v.gold{color:var(--warning)}.know-v.danger{color:#ff9b9b}.know-v.green{color:var(--green)}
-#tools-panel{background:var(--bg-panel);padding:7px 9px;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+#tools-panel{background:var(--bg-panel);padding:7px 9px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
 #upload-zone{border:1px dashed var(--border-md);border-radius:5px;padding:6px 8px;text-align:center;cursor:pointer;transition:all 0.2s;flex-shrink:0}
 #upload-zone:hover{border-color:rgba(0,212,164,0.4);background:rgba(0,212,164,0.05)}
 .uz-icon{font-size:13px;display:block;margin-bottom:2px}
@@ -373,6 +373,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
           <span id="action-emoji">🃏</span>
           <div id="action-text" class="action-wait">WAITING</div>
           <div id="action-sizing"></div>
+          <div id="action-win-prob" style="font-family:var(--f-mono);font-size:11px;color:var(--t3);margin-top:3px;min-height:14px;letter-spacing:0.5px"></div>
           <div id="hand-strength"></div>
           <div id="confidence-bar-wrap">
             <div id="confidence-label">CONFIDENCE <span id="confidence-pct">—</span></div>
@@ -1561,6 +1562,8 @@ renderDecision = function(d) {
   if (!dec) return;
   // Feature 1: confidence + equity
   updateConfidence(dec);
+  // Live win rate for this action
+  if (dec.action) updateActionWinProb(dec.action);
   // Feature 4: voice alert on YOUR TURN
   if (d.is_hero_turn && dec.action) speakAction(dec.action);
   // Feature 9: range chart when on analysis tab
@@ -1613,6 +1616,7 @@ function startPolling() {
   _knowledgeInterval = setInterval(() => { if (_pollActive) renderKnowledge(); }, 15000);
   _statsInterval     = setInterval(() => { if (_pollActive) loadPlayerStats(); }, 30000);
   _mem0Interval      = setInterval(() => { if (_pollActive) loadMem0(); }, 60000);
+  setInterval(() => { if (_pollActive) loadActionWinRates(); }, 120000); // refresh win rates every 2 min
 }
 
 function stopPolling() {
@@ -1650,7 +1654,43 @@ if (typeof BroadcastChannel !== 'undefined') {
   // Announce we are polling
   setInterval(() => { if (_isPrimary && !document.hidden) bc.postMessage('polling'); }, 10000);
   // If we don't hear from a primary within 12s, take over
-  let _primaryTimeout = setTimeout(() => { _isPrimary = true; startPolling(); }, 12000);
+  let _primaryTimeout = setTimeout(() => { _isPrimary = true; startPolling();
+loadActionWinRates();
+
+// ── LIVE ACTION WIN RATES from DB ─────────────────────────────────────────────
+let _actionWinRates = {};
+async function loadActionWinRates() {
+  try {
+    const r = await fetch(`${SERVER}/action_win_rates`);
+    const data = await r.json();
+    if (data.ok && data.action_win_rates) {
+      _actionWinRates = data.action_win_rates;
+      // If decision is already showing, update the win prob
+      const actionEl = document.getElementById('action-text');
+      if (actionEl && actionEl.textContent) {
+        updateActionWinProb(actionEl.textContent.trim());
+      }
+    }
+  } catch(e) {}
+}
+
+function updateActionWinProb(action) {
+  const el = document.getElementById('action-win-prob');
+  if (!el) return;
+  const rate = _actionWinRates[action];
+  if (rate && rate.total >= 5) {
+    const wr = rate.win_rate;
+    const color = wr >= 30 ? 'var(--green)' : wr >= 18 ? 'var(--warning)' : 'var(--red)';
+    el.style.color = color;
+    el.textContent = `${wr}% win rate · ${rate.total} hands`;
+  } else if (rate && rate.total > 0) {
+    el.style.color = 'var(--t3)';
+    el.textContent = `${rate.win_rate}% win · building data (${rate.total} hands)`;
+  } else {
+    el.style.color = 'var(--t4)';
+    el.textContent = 'play hands to build win rate';
+  }
+} }, 12000);
   bc.onmessage = (e) => {
     if (e.data === 'polling') {
       clearTimeout(_primaryTimeout);
@@ -1663,5 +1703,41 @@ if (typeof BroadcastChannel !== 'undefined') {
 }
 
 startPolling();
+loadActionWinRates();
+
+// ── LIVE ACTION WIN RATES from DB ─────────────────────────────────────────────
+let _actionWinRates = {};
+async function loadActionWinRates() {
+  try {
+    const r = await fetch(`${SERVER}/action_win_rates`);
+    const data = await r.json();
+    if (data.ok && data.action_win_rates) {
+      _actionWinRates = data.action_win_rates;
+      // If decision is already showing, update the win prob
+      const actionEl = document.getElementById('action-text');
+      if (actionEl && actionEl.textContent) {
+        updateActionWinProb(actionEl.textContent.trim());
+      }
+    }
+  } catch(e) {}
+}
+
+function updateActionWinProb(action) {
+  const el = document.getElementById('action-win-prob');
+  if (!el) return;
+  const rate = _actionWinRates[action];
+  if (rate && rate.total >= 5) {
+    const wr = rate.win_rate;
+    const color = wr >= 30 ? 'var(--green)' : wr >= 18 ? 'var(--warning)' : 'var(--red)';
+    el.style.color = color;
+    el.textContent = `${wr}% win rate · ${rate.total} hands`;
+  } else if (rate && rate.total > 0) {
+    el.style.color = 'var(--t3)';
+    el.textContent = `${rate.win_rate}% win · building data (${rate.total} hands)`;
+  } else {
+    el.style.color = 'var(--t4)';
+    el.textContent = 'play hands to build win rate';
+  }
+}
 </script>
 </html>
