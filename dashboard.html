@@ -68,6 +68,8 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 #decision-panel{padding:0}
 #decision-panel.your-turn{animation:glowPulse 2s ease-in-out infinite}
 #your-turn-banner{display:none;align-items:center;justify-content:center;gap:6px;padding:6px 14px;background:rgba(0,212,164,0.08);border-bottom:1px solid rgba(0,212,164,0.2);font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--green)}
+#tilt-banner{display:none;align-items:center;justify-content:center;gap:6px;padding:5px 12px;background:rgba(255,85,85,0.08);border-bottom:1px solid rgba(255,85,85,0.2);font-size:9px;font-weight:700;letter-spacing:1px;color:#ff9b9b}
+#tilt-banner.show{display:flex}
 #your-turn-banner.show{display:flex}
 .turn-pulse{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1s infinite}
 #action-display{padding:16px 12px 12px;border-bottom:1px solid var(--border);text-align:center;position:relative}
@@ -79,6 +81,14 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .action-check{color:var(--check)}.action-fold{color:var(--fold)}.action-wait{color:var(--t4)}
 #action-sizing{font-family:var(--f-mono);font-size:13px;color:var(--t2)}
 #hand-strength{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-top:4px;min-height:14px;transition:color 0.3s}
+#confidence-bar-wrap{margin-top:8px;padding:0 2px}
+#confidence-label{display:flex;justify-content:space-between;font-size:9px;font-family:var(--f-mono);color:var(--t3);margin-bottom:3px}
+#confidence-label span{color:var(--t1);font-weight:700}
+#confidence-track{height:4px;background:var(--border-md);border-radius:2px;overflow:hidden}
+#confidence-fill{height:100%;border-radius:2px;transition:width 0.5s,background 0.3s;width:0%}
+#equity-row{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding:4px 8px;background:var(--bg-card);border-radius:4px;border:1px solid var(--border)}
+.eq-lbl{font-size:9px;color:var(--t3);font-family:var(--f-mono);letter-spacing:0.5px}
+.eq-val{font-size:13px;font-weight:700;font-family:var(--f-mono);color:var(--green)}
 #hand-strength.strong{color:var(--warning)}#hand-strength.made{color:var(--green)}#hand-strength.draw{color:var(--blue)}#hand-strength.nothing{color:var(--t4)}
 #bet-context-box{padding:8px 12px;border-bottom:1px solid var(--border);display:none}
 .bc-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0}
@@ -362,11 +372,20 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 
       <div class="panel" id="decision-panel">
         <div id="your-turn-banner"><span class="turn-pulse"></span>YOUR TURN TO ACT</div>
+        <div id="tilt-banner">🔴 TILT ALERT — 3+ losses in a row — engine tightened</div>
         <div id="action-display">
           <span id="action-emoji">🃏</span>
           <div id="action-text" class="action-wait">WAITING</div>
           <div id="action-sizing"></div>
           <div id="hand-strength"></div>
+          <div id="confidence-bar-wrap">
+            <div id="confidence-label">CONFIDENCE <span id="confidence-pct">—</span></div>
+            <div id="confidence-track"><div id="confidence-fill"></div></div>
+          </div>
+          <div id="equity-row">
+            <span class="eq-lbl">EQUITY EST</span>
+            <span class="eq-val" id="equity-est">—%</span>
+          </div>
         </div>
         <div id="bet-context-box">
           <div class="bc-row"><span class="bc-label">AGGRESSOR</span><span class="bc-val" id="bc-aggressor">—</span></div>
@@ -383,6 +402,9 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
           <div class="stage-pill" id="sp-flop">FLOP</div>
           <div class="stage-pill" id="sp-turn">TURN</div>
           <div class="stage-pill" id="sp-river">RIVER</div>
+        </div>
+        <div id="table-dynamic-bar" style="padding:5px 12px;border-bottom:1px solid var(--border);font-size:10px;color:var(--t2);display:none" id="table-dynamic-wrap">
+          <span id="table-dynamic"></span>
         </div>
         <div id="stats-bar">
           <div class="stat-chip"><span id="ms-hands">0</span> hands</div>
@@ -439,6 +461,23 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
   <!-- SESSION TAB -->
   <div class="tab-content" id="tab-session">
     <div class="s-inner">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase">Session Target</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:9px;color:var(--t3);font-family:var(--f-mono)">Goal:</span>
+            <input type="number" id="session-target" value="500" style="width:60px;background:var(--bg);border:1px solid var(--border-md);border-radius:4px;padding:2px 6px;font-family:var(--f-mono);font-size:11px;color:var(--t1);text-align:right" oninput="updateSessionTarget()">
+            <span style="font-size:9px;color:var(--t3);font-family:var(--f-mono)">chips</span>
+          </div>
+        </div>
+        <div style="height:6px;background:var(--border-md);border-radius:3px;overflow:hidden;margin-bottom:4px">
+          <div id="target-fill" style="height:100%;border-radius:3px;background:var(--green);width:0%;transition:width 0.5s,background 0.3s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-size:10px;color:var(--t2);font-family:var(--f-mono)" id="target-label">0 / 500 chips</span>
+          <span style="font-size:10px;font-weight:700;font-family:var(--f-mono)" id="target-pct">0%</span>
+        </div>
+      </div>
       <div class="stat-row">
         <div class="stat-box"><div class="stat-val t" id="sess-wr">—%</div><div class="stat-lbl">Win Rate</div></div>
         <div class="stat-box"><div class="stat-val a" id="sess-carry">—%</div><div class="stat-lbl">Carry Rate</div></div>
@@ -498,6 +537,10 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
           <div class="pot-equity-txt" id="poc-txt">Enter a hand to calculate</div>
         </div>
         <div class="a-box">
+          <div class="a-box-title">Pre-flop Range Chart — Current Position</div>
+          <div id="preflop-range-chart"><div class="empty-state" style="padding:8px"><div class="empty-text">Sit at a table to see position-based range</div></div></div>
+        </div>
+        <div class="a-box">
           <div class="a-box-title">Full Analysis</div>
           <div id="full-analysis-result"><div class="empty-state" style="padding:8px"><div class="empty-text">Run analysis to see Claude's full assessment</div></div></div>
           <button class="tool-btn primary" style="margin-top:8px;width:100%" onclick="runAnalysis()">🔍 Run Full Analysis</button>
@@ -532,6 +575,14 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
       <div class="setting-row">
         <div><div class="setting-lbl">Show Hand Strength</div><div class="setting-sub">Display TWO PAIR / FLUSH etc on decision panel</div></div>
         <div class="toggle on" id="toggle-handstr" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-lbl">Voice Alerts</div><div class="setting-sub">Speak action aloud when it&apos;s your turn</div></div>
+        <div class="toggle" id="toggle-voice" onclick="toggleVoice(this)"></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="setting-lbl">Hot Seat Alert</div><div class="setting-sub">Show tilt warning after 3 consecutive losses</div></div>
+        <div class="toggle on" id="toggle-tilt" onclick="this.classList.toggle('on')"></div>
       </div>
     </div>
   </div>
@@ -1336,6 +1387,195 @@ document.getElementById('upload-input').addEventListener('change', async e => {
     } else { stat.textContent = '⚠ ' + (data.error||'Upload failed'); stat.style.color = 'var(--red)'; }
   } catch(err) { stat.textContent = '⚠ ' + err.message; stat.style.color = 'var(--red)'; }
 });
+
+// ── PLAYER ID HELPERS ─────────────────────────────────────────────────────────
+function extractPlayerId(fullName) {
+  const m = fullName.match(/@\s*([A-Za-z0-9_-]+)\s*$/);
+  return m ? m[1] : fullName;
+}
+function extractDisplayName(fullName) {
+  const m = fullName.match(/^(.+?)\s*@/);
+  return m ? m[1].trim() : fullName;
+}
+
+// ── FEATURE 1: Confidence bar update ──────────────────────────────────────────
+function updateConfidence(dec) {
+  const pct = dec.confidence || 0;
+  const fill = document.getElementById('confidence-fill');
+  const label = document.getElementById('confidence-pct');
+  const eq = document.getElementById('equity-est');
+  if (!fill || !label) return;
+  fill.style.width = pct + '%';
+  fill.style.background = pct >= 70 ? 'var(--green)' : pct >= 45 ? 'var(--warning)' : 'var(--red)';
+  label.textContent = pct + '%';
+  label.style.color = pct >= 70 ? 'var(--green)' : pct >= 45 ? 'var(--warning)' : 'var(--red)';
+  if (eq) {
+    eq.textContent = (dec.equityEst || '—') + '%';
+    eq.style.color = (dec.equityEst||0) >= 50 ? 'var(--green)' : (dec.equityEst||0) >= 30 ? 'var(--warning)' : 'var(--red)';
+  }
+}
+
+// ── FEATURE 3: Session target tracker ─────────────────────────────────────────
+let sessionNetChips = 0;
+function updateSessionTarget() {
+  const target = parseInt(document.getElementById('session-target')?.value || 500);
+  const fill = document.getElementById('target-fill');
+  const lbl = document.getElementById('target-label');
+  const pct = document.getElementById('target-pct');
+  if (!fill) return;
+  const progress = target > 0 ? Math.max(0, Math.min(100, Math.round(sessionNetChips / target * 100))) : 0;
+  fill.style.width = progress + '%';
+  fill.style.background = sessionNetChips < 0 ? 'var(--red)' : progress >= 100 ? 'var(--green)' : 'var(--warning)';
+  if (lbl) lbl.textContent = sessionNetChips + ' / ' + target + ' chips';
+  if (pct) {
+    pct.textContent = progress + '%';
+    pct.style.color = progress >= 100 ? 'var(--green)' : progress >= 50 ? 'var(--warning)' : 'var(--t2)';
+  }
+}
+
+function trackChipMovement(rawData) {
+  if (!rawData) return;
+  const hero = rawData.all_players_snap ? Object.values(rawData.all_players_snap).find(p => p.isHero) : null;
+  if (hero && hero.prize > 0) { sessionNetChips += hero.prize; updateSessionTarget(); }
+}
+
+// ── FEATURE 4: Tilt detection ─────────────────────────────────────────────────
+let consecutiveLosses = 0;
+function checkTilt(result) {
+  const tiltEnabled = document.getElementById('toggle-tilt')?.classList.contains('on');
+  if (!tiltEnabled) return;
+  if (result === 'LOST') { consecutiveLosses++; }
+  else if (result === 'WON') { consecutiveLosses = 0; }
+  const tiltBanner = document.getElementById('tilt-banner');
+  if (!tiltBanner) return;
+  if (consecutiveLosses >= 3) {
+    tiltBanner.classList.add('show');
+    tiltBanner.textContent = `🔴 TILT ALERT — ${consecutiveLosses} losses in a row — engine tightened`;
+  } else {
+    tiltBanner.classList.remove('show');
+  }
+}
+
+// ── FEATURE 5: Table dynamic summary (from weight_updates) ────────────────────
+function updateTableDynamic(wu) {
+  if (!wu) return;
+  const dangerCount = wu.danger_players ? wu.danger_players.length : 0;
+  const carryRate = wu.carry_rate || 0;
+  let dynamic = '';
+  if (dangerCount >= 2) dynamic = '⚠ Aggressive table — tighten range, avoid thin value bets';
+  else if (dangerCount === 1) dynamic = '⚠ One danger player — 3bet lighter, call river overbets';
+  else if (carryRate > 45) dynamic = '🔥 High carry rate — board patterns very predictable';
+  else if (carryRate > 30) dynamic = '⚡ Moderate carry — use predicted cards for decisions';
+  else dynamic = '✓ Table passive — exploit with steals and thin value bets';
+  state.tableDynamic = dynamic;
+  const tw = document.getElementById('table-dynamic-wrap'); if(tw) tw.style.display = dynamic ? 'block' : 'none';
+}
+
+// ── FEATURE 9: Pre-flop range chart ──────────────────────────────────────────
+function renderPreflopRangeChart() {
+  const el = document.getElementById('preflop-range-chart');
+  if (!el) return;
+  const dec = state.raw?.decision;
+  const pos = dec?.position || 'unknown';
+  const topCards = state.raw?.decision?.top10 || [];
+  const topRanks = new Set(topCards.map(c => c.slice(0,-1)));
+  const RANKS = ['A','K','Q','J','10','9','8','7','6','5','4','3','2'];
+  // Position-based play ranges (% of hands to play from each position)
+  const posRanges = { BTN:0.40, CO:0.32, HJ:0.24, EP:0.15, SB:0.28, BB:0.35, unknown:0.25 };
+  const playRange = posRanges[pos] || 0.25;
+  // Build 13x13 grid — top-left = AA, diagonal = pocket pairs, above = suited, below = offsuit
+  let html = `<div style="margin-bottom:6px;font-size:9px;color:var(--t2);font-family:var(--f-mono)">Position: <span style="color:var(--green);font-weight:700">${pos}</span> · Playing top <span style="color:var(--warning)">${Math.round(playRange*100)}%</span> of hands</div>`;
+  html += '<div style="display:grid;grid-template-columns:repeat(13,1fr);gap:1px">';
+  for (let i = 0; i < 13; i++) {
+    for (let j = 0; j < 13; j++) {
+      const r1 = RANKS[i], r2 = RANKS[j];
+      const isPair = i === j;
+      const isSuited = i < j;
+      const label = isPair ? r1+r1 : isSuited ? r1+r2+'s' : r2+r1+'o';
+      const isTopRank = topRanks.has(r1) || topRanks.has(r2);
+      // Color: green=play, yellow=situational, dark=fold
+      const rankStrength = (13-i + 13-j) / 26;
+      const shouldPlay = rankStrength > (1 - playRange);
+      const isSituational = !shouldPlay && rankStrength > (1 - playRange - 0.12);
+      const isCarryHot = isTopRank && (shouldPlay || isSituational);
+      const bg = isCarryHot ? 'rgba(0,212,164,0.55)' : shouldPlay ? 'rgba(0,212,164,0.25)' : isSituational ? 'rgba(227,179,65,0.2)' : 'var(--bg-card)';
+      const color = isCarryHot ? '#0d1117' : shouldPlay ? 'var(--green)' : isSituational ? 'var(--warning)' : 'var(--t4)';
+      html += `<div style="aspect-ratio:1;background:${bg};border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);font-size:7px;color:${color};font-weight:700">${label}</div>`;
+    }
+  }
+  html += '</div>';
+  html += '<div style="display:flex;gap:10px;margin-top:6px;font-size:9px;color:var(--t3)">';
+  html += '<span style="color:var(--green)">■</span> Play &nbsp; <span style="color:var(--warning)">■</span> Situational &nbsp; <span style="color:rgba(0,212,164,0.8)">■</span> Carry hot';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ── FEATURE 10: Voice alerts ──────────────────────────────────────────────────
+let lastSpokenAction = '';
+function toggleVoice(el) {
+  el.classList.toggle('on');
+  if (el.classList.contains('on')) {
+    const u = new SpeechSynthesisUtterance('Voice alerts enabled');
+    u.volume = 0.5; u.rate = 1.1;
+    speechSynthesis.speak(u);
+  }
+}
+function speakAction(action) {
+  if (!document.getElementById('toggle-voice')?.classList.contains('on')) return;
+  if (action === lastSpokenAction) return;
+  lastSpokenAction = action;
+  const msgs = { RAISE:'Raise', BET:'Bet', CALL:'Call', CHECK:'Check', FOLD:'Fold' };
+  const msg = msgs[action] || action;
+  if (msg && 'speechSynthesis' in window) {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(msg);
+    u.volume = 0.8; u.rate = 1.0; u.pitch = 1.0;
+    speechSynthesis.speak(u);
+  }
+}
+
+// ── PATCH renderDecision to call new features ─────────────────────────────────
+const _origRenderDecision = renderDecision;
+renderDecision = function(d) {
+  _origRenderDecision(d);
+  const dec = d.decision;
+  if (!dec) return;
+  // Feature 1: confidence + equity
+  updateConfidence(dec);
+  // Feature 4: voice alert on YOUR TURN
+  if (d.is_hero_turn && dec.action) speakAction(dec.action);
+  // Feature 9: range chart when on analysis tab
+  if (document.getElementById('tab-analysis')?.classList.contains('active')) {
+    renderPreflopRangeChart();
+  }
+};
+
+// ── PATCH weight_update handler to call table dynamic + tilt ──────────────────
+const _origRenderKnowledge = renderKnowledge;
+renderKnowledge = function() {
+  _origRenderKnowledge();
+  updateTableDynamic(state.lastWeightUpdate);
+  // Update table dynamic display if visible
+  const dynEl = document.getElementById('table-dynamic');
+  if (dynEl && state.tableDynamic) dynEl.textContent = state.tableDynamic;
+};
+
+// ── PATCH hand history tracking for tilt + session target ────────────────────
+const _origLoadInitialState = loadInitialState;
+loadInitialState = async function() {
+  await _origLoadInitialState();
+  if (state.handHistory.length) {
+    const last = state.handHistory[state.handHistory.length - 1];
+    if (last?.result) checkTilt(last.result);
+  }
+};
+
+// ── PATCH renderAll to track chips ────────────────────────────────────────────
+const _origRenderAll = renderAll;
+renderAll = function() {
+  _origRenderAll();
+  trackChipMovement(state.raw);
+};
 
 // ── BOOT ───────────────────────────────────────────────────────────────────────
 initSession();
