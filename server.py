@@ -88,6 +88,15 @@ def get_or_create_letta_agent(game_id: str) -> str:
         existing = next((a for a in agents if a.name == f"poker_{game_id}"), None)
         if existing:
             _letta_agents[game_id] = existing.id
+            # Persist to DB so it survives restarts
+            try:
+                with get_db() as db:
+                    db.execute(
+                        "INSERT OR REPLACE INTO letta_agents (game_id, agent_id) VALUES (?,?)",
+                        (game_id, existing.id)
+                    )
+            except Exception:
+                pass
             return existing.id
         agent = client.agents.create(
             name=f"poker_{game_id}",
@@ -104,6 +113,15 @@ Return structured JSON with weight_updates affecting the betting algorithm.
 Always base analysis on actual data only."""
         )
         _letta_agents[game_id] = agent.id
+        # Persist to DB so it survives restarts
+        try:
+            with get_db() as db:
+                db.execute(
+                    "INSERT OR REPLACE INTO letta_agents (game_id, agent_id) VALUES (?,?)",
+                    (game_id, agent.id)
+                )
+        except Exception:
+            pass
         print(f"[letta] Created agent for game {game_id}: {agent.id}")
         return agent.id
     except Exception as e:
@@ -141,7 +159,8 @@ manager = ConnectionManager()
 
 # Latest raw state per session (for reconnect)
 _latest_state:   Dict[str, dict] = {}
-_active_game_id: str = ""  # most recently active game — dashboard fetches this on load
+_active_game_id: str = ""  # most recently active game
+_extension_id:   str = ""  # chrome extension ID — sent by extension in /raw
 
 # ── LangGraph — Between-Hands Workflow ───────────────────────────────────────
 # Replaces the manual _run_between_hands prompt engineering.
@@ -450,7 +469,14 @@ def init_db():
             away_mode    INTEGER DEFAULT 0,
             shown_hands  TEXT    DEFAULT '{}',
             player_stats TEXT    DEFAULT '{}',
-            ts           TEXT    DEFAULT (datetime('now'))
+            ts           TEXT    DEFAULT (datetime('now')),
+            UNIQUE(game_id, hand_num)
+        );
+
+        CREATE TABLE IF NOT EXISTS letta_agents (
+            game_id   TEXT PRIMARY KEY,
+            agent_id  TEXT NOT NULL,
+            ts        TEXT DEFAULT (datetime('now'))
         );
 
         CREATE TABLE IF NOT EXISTS mem0_log (
@@ -596,6 +622,20 @@ def init_db():
                 pass
 
 init_db()
+
+# ── Load persisted Letta agent IDs from DB into memory cache ─────────────────
+def _load_letta_agents():
+    try:
+        with get_db() as db:
+            rows = db.execute("SELECT game_id, agent_id FROM letta_agents").fetchall()
+            for row in rows:
+                _letta_agents[row["game_id"]] = row["agent_id"]
+            if rows:
+                print(f"[letta] Loaded {len(rows)} cached agent IDs from DB")
+    except Exception as e:
+        print(f"[letta] Could not load agent cache: {e}")
+
+_load_letta_agents()
 
 def get_mem0():
     return MemoryClient(api_key=MEM0_API_KEY)
@@ -810,7 +850,7 @@ async def analyze(game_id: str = ""):
         if mem_user:
             all_mems = mem0.get_all(filters={"user_id": mem_user})
         else:
-            all_mems = mem0.get_all(filters={"user_id": "poker_player"})  # legacy fallback
+            return {"ok": False, "error": "game_id required for /analyze"}
         memories = []
         if isinstance(all_mems, list):
             for m in all_mems:
@@ -886,7 +926,7 @@ Reference specific hands from memory where possible. Do not assume anything not 
         # Also push the analysis itself into Mem0 so /advice can reference it
         mem0.add(
             f"ANALYSIS at {datetime.utcnow().isoformat()}: {narrative[:500]}",
-            user_id=game_id if game_id else "poker_player",
+            user_id=game_id,
             metadata={"type": "analysis", "hands": stats.get("total",0)}
         )
 
@@ -921,7 +961,9 @@ async def analysis_history():
 async def all_memories(game_id: str = ""):
     try:
         mem0 = get_mem0()
-        mem_user = game_id if game_id else "poker_player"
+        if not game_id:
+            return {"ok": False, "error": "game_id required"}
+        mem_user = game_id
         all_mems = mem0.get_all(filters={"user_id": mem_user})
         memories = []
         if isinstance(all_mems, list):
@@ -1132,6 +1174,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 class RawData(BaseModel):
     session_id:   str
     game_id:      str  = ""   # game ID from URL — primary key for WS routing
+    extension_id: str  = ""   # chrome.runtime.id — so dashboard can send messages to extension
     hole_cards:   list  = []
     board_cards:  list  = []
     pot_size:     int   = 0
@@ -1173,9 +1216,11 @@ async def post_raw(data: RawData):
     except Exception:
         payload["server_status"] = {"hands_logged": 0, "mem0_live": False, "claude_live": False}
 
-    global _active_game_id
+    global _active_game_id, _extension_id
     route_key       = data.game_id or data.session_id
     _active_game_id = route_key
+    if data.extension_id:
+        _extension_id = data.extension_id
     _latest_state[route_key] = payload
     await manager.broadcast(route_key, {"type": "raw", "data": payload})
     return {"ok": True}
@@ -1184,7 +1229,7 @@ async def post_raw(data: RawData):
 @app.get("/active")
 async def get_active():
     """Dashboard calls this on load to get the current game ID — no URL params needed."""
-    return {"game_id": _active_game_id, "ok": bool(_active_game_id)}
+    return {"game_id": _active_game_id, "ok": bool(_active_game_id), "extension_id": _extension_id}
 
 @app.get("/api/state/{session_id}")
 async def get_state(session_id: str):
@@ -1241,7 +1286,7 @@ async def dashboard():
 from fastapi import Request as FastAPIRequest
 
 @app.post("/upload_csv")
-async def upload_csv(request: FastAPIRequest, game_id: str = "csv_upload"):
+async def upload_csv(request: FastAPIRequest, game_id: str = ""):
     import re
     try:
         text  = (await request.body()).decode("utf-8")
@@ -1266,27 +1311,135 @@ async def upload_csv(request: FastAPIRequest, game_id: str = "csv_upload"):
                 elif entry.startswith("River:"):
                     rm = re.search(r"\[([^\]]+)\]$", entry)
                     if rm: cur["river"] = card_re.findall(rm.group(1))
+
+        # Use active game_id so hands are visible to LangGraph + Mem0 pipeline
+        target_game_id = game_id or _active_game_id or "csv_upload"
+
         stored = 0
         with get_db() as db:
             for h in hands:
+                if not h["hole_cards"]: continue
                 board = h["flop"] + h["turn"] + h["river"]
                 try:
                     db.execute(
-                        "INSERT OR IGNORE INTO hands (session_id,hand_num,hole_cards,board) VALUES(?,?,?,?)",
-                        ("csv_upload", h["hand_num"], json.dumps(h["hole_cards"]), json.dumps(board))
+                        """INSERT OR IGNORE INTO hands
+                        (game_id, session_id, hand_num, hole_cards, board)
+                        VALUES (?,?,?,?,?)""",
+                        (target_game_id, target_game_id,
+                         h["hand_num"],
+                         json.dumps(h["hole_cards"]),
+                         json.dumps(board))
                     )
                     stored += 1
                 except Exception:
                     pass
+
+        # ── Build model JSON from ALL hands in DB for this game ─────────────────
+        # Uses full history, not just the uploaded batch. Safe for re-uploads.
+        model_json = {}
         try:
-            get_mem0().add(
-                f"CSV upload: {len(hands)} historical hands loaded",
-                user_id=game_id,
-                metadata={"type": "csv_upload", "count": len(hands)}
-            )
-        except Exception:
-            pass
-        return {"ok": True, "hands": stored}
+            RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A']
+            SUITS = ['♠','♥','♦','♣']
+            ALL_CARDS = [r+s for r in RANKS for s in SUITS]
+            EARLY = {'hole_1','hole_2','flop_1','flop_2','flop_3'}
+
+            with get_db() as db:
+                all_rows = db.execute(
+                    "SELECT hole_cards, board FROM hands WHERE game_id=? ORDER BY hand_num ASC",
+                    (target_game_id,)
+                ).fetchall()
+
+            all_hands = []
+            for row in all_rows:
+                hc = json.loads(row["hole_cards"] or "[]")
+                bd = json.loads(row["board"] or "[]")
+                if hc:
+                    # Reconstruct flop/turn/river from board
+                    all_hands.append({
+                        "hole_cards": hc,
+                        "flop":  bd[:3] if len(bd) >= 3 else [],
+                        "turn":  [bd[3]] if len(bd) >= 4 else [],
+                        "river": [bd[4]] if len(bd) >= 5 else [],
+                    })
+
+            if all_hands:
+                pos_freq = {c: {} for c in ALL_CARDS}
+                for h in all_hands:
+                    for j, c in enumerate(h["hole_cards"]): pos_freq[c][f"hole_{j+1}"] = pos_freq[c].get(f"hole_{j+1}", 0) + 1
+                    for j, c in enumerate(h["flop"]):       pos_freq[c][f"flop_{j+1}"] = pos_freq[c].get(f"flop_{j+1}", 0) + 1
+                    for c in h["turn"]:                     pos_freq[c]["turn"]         = pos_freq[c].get("turn",  0) + 1
+                    for c in h["river"]:                    pos_freq[c]["river"]        = pos_freq[c].get("river", 0) + 1
+
+                early_bias = {}
+                for c in ALL_CARDS:
+                    e = sum(pos_freq[c].get(p, 0) for p in EARLY)
+                    t = sum(pos_freq[c].values()) or 1
+                    early_bias[c] = e / t
+
+                pos_carry = {p: [0, 0] for p in ["hole_1","hole_2","flop_1","flop_2","flop_3","turn","river"]}
+                carry_hot = {}
+                carry_pairs = carry_total = 0
+                for i in range(len(all_hands) - 1):
+                    h1, h2 = all_hands[i], all_hands[i+1]
+                    h2c = set(h2["hole_cards"] + h2["flop"] + h2["turn"] + h2["river"])
+                    all_h1 = ([(c, f"hole_{j+1}") for j, c in enumerate(h1["hole_cards"])] +
+                              [(c, f"flop_{j+1}") for j, c in enumerate(h1["flop"])] +
+                              [(c, "turn")  for c in h1["turn"]] +
+                              [(c, "river") for c in h1["river"]])
+                    s1 = set(c for c, _ in all_h1)
+                    if s1 and h2c:
+                        carry_total += 1
+                        shared = s1 & h2c
+                        if shared:
+                            carry_pairs += 1
+                            for c in shared: carry_hot[c] = carry_hot.get(c, 0) + 1
+                    for c, pos in all_h1:
+                        pos_carry[pos][1] += 1
+                        if c in h2c: pos_carry[pos][0] += 1
+
+                top_cards = sorted(
+                    [c for c in ALL_CARDS if sum(pos_freq[c].values()) > 2],
+                    key=lambda c: early_bias[c], reverse=True
+                )[:15]
+
+                carry_rate = round(carry_pairs / carry_total * 100) if carry_total else 0
+
+                model_json = {
+                    "earlyBias":  early_bias,
+                    "posCarry":   {k: v for k, v in pos_carry.items()},
+                    "carryHot":   carry_hot,
+                    "topCards":   top_cards,
+                    "carryRate":  carry_rate,
+                    "totalHands": len(all_hands),
+                    "hands":      []  # not serialized — too large
+                }
+                print(f"[upload_csv] Model built: {len(all_hands)} hands, carry={carry_rate}%, top={top_cards[:5]}")
+
+        except Exception as e:
+            print(f"[upload_csv] Model build error: {e}")
+
+        # ── Trigger LangGraph immediately ─────────────────────────────────────
+        # LangGraph node_store_memory will write AI insights to Mem0 (not raw data)
+        if stored > 0 and hands:
+            last = hands[-1]
+            await _claude_queue.put({
+                "session_id":  target_game_id,
+                "game_id":     target_game_id,
+                "hand_num":    last["hand_num"],
+                "hole_cards":  last["hole_cards"],
+                "flop":        last["flop"],
+                "turn":        last["turn"],
+                "river":       last["river"],
+                "hero_won":    False,
+                "hero_folded": False,
+                "all_in":      False,
+                "away_mode":   False,
+                "pot":         0,
+                "shown_hands": {},
+                "player_stats": {},
+            })
+
+        return {"ok": True, "hands": stored, "game_id": target_game_id, "model": model_json}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 

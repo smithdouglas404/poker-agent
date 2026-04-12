@@ -5,741 +5,552 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Poker Advisor Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg-base:      #060a0f;
-  --bg-panel:     #0c1219;
-  --bg-panel-2:   #101820;
-  --bg-hover:     #131e2a;
-  --border:       #1e2d3d;
-  --border-hi:    #2d4a6a;
-  --accent:       #00d4a4;
-  --accent-dim:   rgba(0,212,164,0.12);
-  --accent-glow:  rgba(0,212,164,0.3);
-  --danger:       #ff3d3d;
-  --danger-dim:   rgba(255,61,61,0.12);
-  --warning:      #ffb020;
-  --warning-dim:  rgba(255,176,32,0.12);
-  --info:         #4da6ff;
-  --info-dim:     rgba(77,166,255,0.12);
-  --purple:       #a78bfa;
-  --purple-dim:   rgba(167,139,250,0.12);
-  --text-1:       #e8f0f8;
-  --text-2:       #b8cfe0;
-  --text-3:       #8aadc8;
-  --raise:        #00d4a4;
-  --bet:          #4da6ff;
-  --call:         #ffb020;
-  --fold:         #ff3d3d;
-  --check:        #7a8fa6;
-  --f-head:       'Barlow Condensed', sans-serif;
-  --f-mono:       'IBM Plex Mono', monospace;
-  --f-body:       'DM Sans', sans-serif;
+  /* Base surfaces */
+  --bg:        #070B12;
+  --bg-panel:  #0C1220;
+  --bg-card:   #111827;
+  --bg-hover:  #1A2535;
+  --bg-input:  #0E1525;
+
+  /* Borders */
+  --border:    rgba(255,255,255,0.06);
+  --border-md: rgba(255,255,255,0.1);
+  --border-hi: rgba(255,255,255,0.18);
+
+  /* Primary accent — amber gold */
+  --gold:      #F5A623;
+  --gold-dim:  rgba(245,166,35,0.12);
+  --gold-glow: rgba(245,166,35,0.25);
+
+  /* Signal colors */
+  --green:     #10B981;
+  --green-dim: rgba(16,185,129,0.12);
+  --red:       #EF4444;
+  --red-dim:   rgba(239,68,68,0.12);
+  --blue:      #60A5FA;
+  --blue-dim:  rgba(96,165,250,0.12);
+  --purple:    #A78BFA;
+  --purple-dim:rgba(167,139,250,0.12);
+
+  /* Text */
+  --t1: #F0F6FF;   /* primary — crisp white-blue */
+  --t2: #94A3B8;   /* secondary */
+  --t3: #4E6580;   /* muted */
+  --t4: #2A3D54;   /* very muted */
+
+  /* Decision colors */
+  --raise: #F5A623;
+  --bet:   #60A5FA;
+  --call:  #10B981;
+  --check: #94A3B8;
+  --fold:  #EF4444;
+
+  /* Fonts */
+  --f-display: 'Chakra Petch', sans-serif;
+  --f-mono:    'Share Tech Mono', monospace;
+  --f-body:    'Outfit', sans-serif;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-body {
-  background: var(--bg-base);
-  color: var(--text-1);
-  font-family: var(--f-body);
-  font-size: 14px;
+html, body {
   height: 100vh;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  background: var(--bg);
+  color: var(--t1);
+  font-family: var(--f-body);
+  font-size: 13px;
 }
 
-/* ── HEADER ── */
+/* ── HEADER ────────────────────────────────────────────────────────────────── */
 #header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 20px;
+  height: 48px;
   background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-#header .logo {
-  font-family: var(--f-head);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--accent);
-  text-transform: uppercase;
-}
-
-#header .logo span { color: var(--text-2); font-weight: 300; }
-
-#live-badge {
+  border-bottom: 1px solid var(--border-md);
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-family: var(--f-mono);
-  font-size:13px;
-  color: var(--accent);
-  background: var(--accent-dim);
-  border: 1px solid var(--accent-glow);
-  padding: 3px 10px;
-  border-radius: 20px;
-  letter-spacing: 1px;
-}
-
-#live-badge .dot {
-  width: 6px; height: 6px;
-  background: var(--accent);
-  border-radius: 50%;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%,100% { opacity: 1; }
-  50%      { opacity: 0.3; }
-}
-
-#session-info {
-  font-family: var(--f-mono);
-  font-size:13px;
-  color: var(--text-3);
-}
-
-#server-status {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
+  padding: 0 16px;
   gap: 12px;
+  flex-shrink: 0;
+  position: relative;
 }
 
-.status-pill {
-  font-family: var(--f-mono);
-  font-size:13px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.status-pill.ok    { color: var(--accent); background: var(--accent-dim); border: 1px solid var(--accent-glow); }
-.status-pill.warn  { color: var(--warning); background: var(--warning-dim); border: 1px solid rgba(255,176,32,0.3); }
-.status-pill.err   { color: var(--danger); background: var(--danger-dim); border: 1px solid rgba(255,61,61,0.3); }
-
-#open-btn {
-  font-family: var(--f-head);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: var(--bg-base);
-  background: var(--accent);
-  border: none;
-  padding: 6px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: opacity 0.2s;
-}
-#open-btn:hover { opacity: 0.85; }
-
-/* ── MAIN GRID ── */
-#main-grid {
-  display: grid;
-  grid-template-columns: 280px 1fr 260px;
-  gap: 1px;
-  background: var(--border);
-  height: calc(100vh - 48px - 200px);
-  min-height: 400px;
-}
-
-/* ── PANEL BASE ── */
-.panel {
-  background: var(--bg-panel);
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.panel-label-small {
-  font-family: var(--f-head);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  color: var(--text-3);
-  text-transform: uppercase;
-  margin-bottom: 12px;
+.logo {
+  font-family: var(--f-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--t1);
   display: flex;
   align-items: center;
   gap: 8px;
 }
+.logo-suit { color: var(--gold); font-size: 14px; }
+.logo em   { color: var(--gold); font-style: normal; }
 
-.panel-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-/* ── LEFT: DECISION PANEL ── */
-#decision-panel {
+.live-badge {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--green-dim);
+  border: 1px solid rgba(16,185,129,0.3);
+  font-family: var(--f-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--green);
+}
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 1.8s ease-in-out infinite;
 }
 
+/* ── SIGNATURE ANIMATIONS ────────────────────────────────────────────────── */
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+@keyframes snapIn { 0%{transform:scale(0.92) translateY(4px);opacity:0} 100%{transform:scale(1) translateY(0);opacity:1} }
+@keyframes glowPulse { 0%,100%{box-shadow:0 0 0px transparent} 50%{box-shadow:0 0 30px var(--glow-color,rgba(245,166,35,0.2))} }
+@keyframes countUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes cardFlip { 0%{transform:rotateY(90deg) scale(0.9);opacity:0} 60%{transform:rotateY(-8deg) scale(1.05)} 100%{transform:rotateY(0) scale(1);opacity:1} }
+@keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
+@keyframes fadeSlideUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes borderGlow { 0%,100%{border-color:var(--border)} 50%{border-color:var(--gold-glow)} }
+
+/* Scanline texture on bg */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Decision panel — transforms when your turn */
+#decision-panel {
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+#decision-panel.your-turn {
+  --glow-color: rgba(245,166,35,0.15);
+  animation: glowPulse 2s ease-in-out infinite;
+  border-right: 1px solid rgba(245,166,35,0.2);
+}
+#decision-panel.your-turn #action-text {
+  animation: snapIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+
+/* Action text snap-in on change */
+#action-text {
+  transition: color 0.3s;
+  transform-origin: center;
+}
+.action-snap { animation: snapIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* Cards — beautiful with flip animation */
+.card {
+  perspective: 400px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover { transform: translateY(-2px); }
+.card-flip { animation: cardFlip 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* Hero cards get special treatment */
+.card.hero {
+  border-color: var(--gold-glow);
+  box-shadow: 0 0 16px rgba(245,166,35,0.2), 0 4px 12px rgba(0,0,0,0.4);
+  background: linear-gradient(145deg, rgba(245,166,35,0.06), transparent);
+}
+.card.hero .rank { font-size: 20px; }
+
+/* Board cards — slightly larger */
+.board-card {
+  width: 46px;
+  height: 62px;
+}
+.board-card .rank { font-size: 18px; }
+
+/* Suit glyphs use proper unicode */
+.suit-♠, .suit-♣ { color: #E2E8F0; }
+.suit-♥, .suit-♦ { color: #F87171; }
+
+/* RAISE/BET/etc — giant, commanding */
+#action-text {
+  font-size: 56px;
+  line-height: 1;
+  text-shadow: 0 0 40px currentColor;
+}
+.action-raise { color: #F5A623; text-shadow: 0 0 30px rgba(245,166,35,0.4); }
+.action-bet   { color: #60A5FA; text-shadow: 0 0 30px rgba(96,165,250,0.4); }
+.action-call  { color: #10B981; text-shadow: 0 0 30px rgba(16,185,129,0.4); }
+.action-check { color: #94A3B8; text-shadow: none; }
+.action-fold  { color: #EF4444; text-shadow: 0 0 30px rgba(239,68,68,0.3); }
+.action-wait  { color: #2A3D54; text-shadow: none; }
+
+/* Action display decorative corner */
 #action-display {
-  text-align: center;
-  padding: 20px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--bg-panel-2);
+  position: relative;
+}
+#action-display::before, #action-display::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--t4);
+  border-style: solid;
+  opacity: 0.4;
   transition: all 0.3s;
 }
-
-#action-display.raise { border-color: var(--raise); background: rgba(0,212,164,0.06); }
-#action-display.bet   { border-color: var(--bet);   background: rgba(77,166,255,0.06); }
-#action-display.call  { border-color: var(--call);  background: rgba(255,176,32,0.06); }
-#action-display.fold  { border-color: var(--fold);  background: rgba(255,61,61,0.06); }
-#action-display.check { border-color: var(--check); background: rgba(122,143,166,0.06); }
-
-#action-emoji { font-size: 32px; margin-bottom: 6px; }
-
-#action-text {
-  font-family: var(--f-head);
-  font-size: 42px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  line-height: 1;
+#action-display::before { top: 10px; left: 10px; border-width: 1px 0 0 1px; }
+#action-display::after  { top: 10px; right: 10px; border-width: 1px 1px 0 0; }
+#decision-panel.your-turn #action-display::before,
+#decision-panel.your-turn #action-display::after {
+  border-color: var(--gold);
+  opacity: 0.8;
 }
 
-.raise #action-text { color: var(--raise); }
-.bet   #action-text { color: var(--bet); }
-.call  #action-text { color: var(--call); }
-.fold  #action-text { color: var(--fold); }
-.check #action-text { color: var(--check); }
+/* Your turn banner — more dramatic */
+#your-turn-banner {
+  background: linear-gradient(90deg, var(--gold-dim), transparent);
+  border-bottom: 1px solid rgba(245,166,35,0.2);
+  letter-spacing: 3px;
+}
+
+/* Narrative entries — fade in */
+.narr-entry { animation: fadeSlideUp 0.3s ease forwards; }
+
+/* Player cards — subtle hover */
+.player-card {
+  transition: transform 0.15s, box-shadow 0.15s;
+  cursor: default;
+}
+.player-card:hover {
+  transform: translateX(2px);
+  box-shadow: -2px 0 8px rgba(0,0,0,0.3);
+}
+.player-card.danger:hover { box-shadow: -2px 0 12px rgba(239,68,68,0.2); }
+
+/* Status indicators — animated dot when ok */
+.s-indicator.ok .s-dot { animation: pulse 2s ease-in-out infinite; }
+
+/* Equity bar — color transitions */
+#pot-odds-fill {
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1), background 0.4s;
+}
+
+/* Carry chips pop in */
+.carry-chip { animation: fadeSlideUp 0.2s ease forwards; }
+.carry-chip.hot {
+  box-shadow: 0 0 8px rgba(245,166,35,0.3);
+  animation: borderGlow 2s ease-in-out infinite, fadeSlideUp 0.2s ease forwards;
+}
+
+/* Stage pills */
+.stage-pill.active {
+  animation: none;
+  background: var(--gold-dim);
+  border-color: rgba(245,166,35,0.4);
+  color: var(--gold);
+  box-shadow: 0 0 8px rgba(245,166,35,0.15);
+}
+
+/* History entries */
+.history-entry { animation: fadeSlideUp 0.25s ease forwards; }
+
+/* Knowledge rows */
+.know-row { animation: fadeSlideUp 0.2s ease forwards; }
+
+/* HUD values count up feeling */
+.hud-val { transition: color 0.3s; }
+
+/* Bottom strip panels */
+.b-panel {
+  border-right: 1px solid var(--border);
+  transition: background 0.2s;
+}
+.b-panel:last-child { border-right: none; }
+
+/* Scrollbar refined */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+/* Reason items */
+.reason-item { animation: fadeSlideUp 0.2s ease forwards; }
+
+
+#session-info {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--t3);
+  letter-spacing: 0.5px;
+}
+
+.header-spacer { flex: 1; }
+
+/* Status indicators */
+.status-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.s-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid;
+  font-family: var(--f-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  transition: all 0.3s;
+}
+.s-indicator .s-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+
+.s-indicator.ok    { background:var(--green-dim); border-color:rgba(16,185,129,0.3); color:var(--green); }
+.s-indicator.ok .s-dot { background:var(--green); }
+.s-indicator.err   { background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.2); color:#F87171; }
+.s-indicator.err .s-dot { background:#F87171; }
+.s-indicator.warn  { background:var(--gold-dim); border-color:var(--gold-glow); color:var(--gold); }
+.s-indicator.warn .s-dot { background:var(--gold); }
+
+.popout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  background: var(--gold);
+  border: none;
+  font-family: var(--f-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #070B12;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.popout-btn:hover { background: #FBBF24; transform: translateY(-1px); }
+
+/* ── LAYOUT ─────────────────────────────────────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+#main-grid {
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  gap: 1px;
+  background: var(--border);
+  flex: 1;
+  min-height: 0;
+}
+
+.panel {
+  background: var(--bg-panel);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-md) transparent;
+}
+
+#bottom-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 240px;
+  gap: 1px;
+  background: var(--border);
+  height: 220px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-md);
+}
+
+/* ── SECTION LABEL ────────────────────────────────────────────────────────── */
+.sec-label {
+  font-family: var(--f-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--t3);
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sec-label .sec-count {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--t3);
+  border: 1px solid var(--border);
+}
+
+/* ── LEFT: DECISION ────────────────────────────────────────────────────────── */
+#decision-panel { padding: 0; }
+
+#your-turn-banner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--gold-dim);
+  border-bottom: 1px solid var(--gold-glow);
+  font-family: var(--f-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+#your-turn-banner.show { display: flex; }
+.turn-pulse { width:6px; height:6px; border-radius:50%; background:var(--gold); animation:pulse 1s ease-in-out infinite; }
+
+#action-display {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+}
+
+#action-emoji { font-size: 28px; margin-bottom: 8px; display: block; }
+
+#action-text {
+  font-family: var(--f-display);
+  font-size: 52px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  line-height: 1;
+  margin-bottom: 4px;
+  transition: color 0.3s;
+}
+.action-raise { color: var(--raise); }
+.action-bet   { color: var(--bet); }
+.action-call  { color: var(--call); }
+.action-check { color: var(--check); }
+.action-fold  { color: var(--fold); }
+.action-wait  { color: var(--t4); }
 
 #action-sizing {
   font-family: var(--f-mono);
-  font-size: 14px;
-  color: var(--text-2);
-  margin-top: 6px;
+  font-size: 18px;
+  color: var(--t2);
 }
 
-#hero-turn-banner {
-  display: none;
-  font-family: var(--f-head);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-align: center;
-  color: var(--warning);
-  background: var(--warning-dim);
-  border: 1px solid rgba(255,176,32,0.3);
-  padding: 6px;
-  border-radius: 6px;
-  text-transform: uppercase;
-  animation: pulse 1s infinite;
-}
-
-#hero-turn-banner.active { display: block; }
-
+/* Bet context */
 #bet-context-box {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
   display: none;
-  background: var(--bg-panel-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
 }
+#bet-context-box.show { display: block; }
 
-#bet-context-box .bc-row {
+.bc-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
-  font-family: var(--f-mono);
-  font-size: 13px;
+  padding: 3px 0;
+  font-size: 12px;
 }
+.bc-row .bc-label { color: var(--t3); font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.5px; }
+.bc-row .bc-val   { color: var(--t1); font-family: var(--f-mono); font-size: 12px; font-weight: 500; }
+.bc-row .bc-val.highlight { color: var(--gold); }
 
-#bet-context-box .bc-label { color: var(--text-3); }
-#bet-context-box .bc-val   { color: var(--text-1); font-weight: 500; }
-#bet-context-box .bc-val.warn { color: var(--warning); }
-#bet-context-box .bc-val.danger { color: var(--danger); }
-
-#pot-odds-bar {
+#equity-bar-wrap {
   height: 4px;
-  background: var(--border);
+  background: var(--border-md);
   border-radius: 2px;
   margin-top: 8px;
   overflow: hidden;
 }
-
 #pot-odds-fill {
   height: 100%;
-  background: var(--warning);
   border-radius: 2px;
-  transition: width 0.3s;
+  background: var(--gold);
+  transition: width 0.5s;
+  width: 0%;
 }
 
 /* Reasons */
-#reasons-box {
-  background: var(--bg-panel-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
+#reasons-list {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
-
 .reason-item {
-  font-size: 13px;
-  color: var(--text-2);
-  line-height: 1.5;
-  padding: 3px 0;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  gap: 6px;
-}
-.reason-item:last-child { border-bottom: none; }
-.reason-item .ri-dot { color: var(--accent); flex-shrink: 0; }
-.reason-item.warn .ri-dot { color: var(--warning); }
-.reason-item.danger .ri-dot { color: var(--danger); }
-
-/* Stage + Stats */
-#stage-bar {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.stage-pill {
-  font-family: var(--f-mono);
-  font-size:13px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: var(--bg-panel-2);
-  border: 1px solid var(--border);
-  color: var(--text-3);
-}
-
-.stage-pill.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-#model-stats {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.stat-chip {
-  font-family: var(--f-mono);
-  font-size:13px;
-  color: var(--text-2);
-  background: var(--bg-panel-2);
-  border: 1px solid var(--border);
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-
-.stat-chip span { color: var(--accent); }
-
-/* ── CENTER: CARDS + CARRY ── */
-#center-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
-}
-
-#cards-section {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-#hole-cards-row, #board-cards-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.card-label {
-  font-family: var(--f-mono);
-  font-size:13px;
-  color: var(--text-3);
-  width: 40px;
-  flex-shrink: 0;
-}
-
-.card {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 64px;
-  border-radius: 6px;
-  font-family: var(--f-head);
-  font-size: 20px;
-  font-weight: 700;
-  border: 1px solid;
-  flex-direction: column;
-  gap: 1px;
-  transition: all 0.2s;
-  position: relative;
-}
-
-.card .rank { font-size: 18px; line-height: 1; }
-.card .suit { font-size: 13px; line-height: 1; }
-
-.card.red   { color: #ff6b6b; border-color: rgba(255,107,107,0.4); background: rgba(255,107,107,0.06); }
-.card.black { color: #b3c6ff; border-color: rgba(179,198,255,0.4); background: rgba(179,198,255,0.06); }
-
-.card.hole  { border-width: 2px; }
-.card.board { opacity: 0.85; }
-.card.connecting {
-  border-color: var(--accent) !important;
-  background: var(--accent-dim) !important;
-  box-shadow: 0 0 10px var(--accent-glow);
-}
-
-.card .connect-star {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  font-size:13px;
-  color: var(--accent);
-}
-
-/* Predicted cards */
-#predicted-section {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-#predicted-label { margin-bottom: 8px; }
-
-#predicted-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.pred-card {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 50px;
-  border-radius: 5px;
-  font-family: var(--f-head);
-  font-size: 14px;
-  font-weight: 600;
-  border: 1px solid;
-  flex-direction: column;
-  gap: 1px;
-  cursor: default;
-}
-
-.pred-card .rank { font-size: 13px; line-height: 1; }
-.pred-card .suit { font-size:13px; line-height: 1; }
-
-.pred-card.red   { color: #ff9999; border-color: rgba(255,153,153,0.3); background: rgba(255,153,153,0.05); }
-.pred-card.black { color: #c4b5fd; border-color: rgba(196,181,253,0.3); background: rgba(196,181,253,0.05); }
-.pred-card.connecting {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-dim);
-  box-shadow: 0 0 8px rgba(0,212,164,0.2);
-}
-
-.next-label {
-  font-family: var(--f-mono);
-  font-size:13px;
-  color: var(--text-3);
-  margin-bottom: 8px;
-}
-
-/* Carry alert */
-#carry-section {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  display: none;
-}
-
-#carry-section.active { display: block; }
-
-#carry-header {
-  font-family: var(--f-head);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: var(--warning);
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.carry-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.carry-card-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-family: var(--f-mono);
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid var(--border);
-  background: var(--bg-panel-2);
-  color: var(--text-2);
-}
-
-.carry-card-chip.on-board {
-  border-color: var(--danger);
-  background: var(--danger-dim);
-  color: var(--danger);
-}
-
-.carry-card-chip.hotspot {
-  border-color: var(--warning);
-  background: var(--warning-dim);
-  color: var(--warning);
-}
-
-.carry-pct {
-  font-size:13px;
-  opacity: 0.6;
-}
-
-.carry-flush-warn {
-  font-size: 13px;
-  color: #fb923c;
-  padding: 6px 8px;
-  background: rgba(251,146,60,0.1);
-  border-radius: 5px;
-  margin-top: 4px;
-}
-
-.carry-hit-summary {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--danger);
-  margin-top: 6px;
-}
-
-/* Hand history in center */
-#history-section {
-  padding: 16px;
-  flex: 1;
-}
-
-.hand-entry {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.hand-entry:last-child { border-bottom: none; }
-
-.hand-num {
-  font-family: var(--f-mono);
-  font-size:13px;
-  color: var(--text-3);
-  width: 30px;
-  flex-shrink: 0;
-}
-
-.hand-result {
-  font-family: var(--f-head);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  width: 50px;
-  flex-shrink: 0;
-}
-
-.hand-result.won    { color: var(--accent); }
-.hand-result.lost   { color: var(--danger); }
-.hand-result.folded { color: var(--text-3); }
-
-.hand-cards {
-  font-family: var(--f-mono);
-  font-size: 13px;
-  color: var(--text-2);
-  flex: 1;
-}
-
-.hand-note {
-  font-size:13px;
-  color: var(--warning);
-  margin-top: 3px;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--t2);
   line-height: 1.4;
 }
-
-.hand-note.pending { color: var(--text-3); font-style: italic; }
-
-/* ── RIGHT: PLAYER HUB ── */
-#player-panel { display:flex; flex-direction:column; gap:7px; }
-
-.player-entry { background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
-.player-entry.danger { border-color:rgba(255,61,61,0.4); }
-.player-entry.feeder { border-color:rgba(77,166,255,0.3); }
-
-.pname-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
-.player-name { font-family:var(--f-head); font-size:13px; font-weight:600; color:var(--text-1); }
-.player-tag { font-family:var(--f-mono); font-size:13px; padding:2px 6px; border-radius:10px; letter-spacing:1px; }
-.player-tag.danger { background:var(--danger-dim); color:var(--danger); border:1px solid rgba(255,61,61,0.3); }
-.player-tag.feeder { background:var(--info-dim); color:var(--info); border:1px solid rgba(77,166,255,0.3); }
-
-.hud-big4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:3px; margin-bottom:4px; }
-.hud-stat { text-align:center; }
-.hud-val  { font-family:var(--f-mono); font-size:15px; font-weight:500; color:var(--text-1); }
-.hud-val.danger { color:var(--danger); }
-.hud-val.warn   { color:var(--warning); }
-.hud-val.good   { color:var(--accent); }
-.hud-lbl { font-size:13px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; }
-
-.winrate-bar { height:2px; background:var(--border); border-radius:1px; margin:3px 0; overflow:hidden; }
-.winrate-fill { height:100%; border-radius:1px; transition:width .5s; }
-
-.hud-preflop { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; margin-bottom:4px; padding-top:4px; border-top:1px solid var(--border); font-family:var(--f-mono); font-size:13px; }
-.hud-pf-stat { display:flex; flex-direction:column; align-items:center; }
-.hud-pf-val  { color:var(--text-2); font-size:13px; }
-.hud-pf-lbl  { color:var(--text-3); font-size:13px; }
-
-.player-bottom-row { display:flex; justify-content:space-between; align-items:center; margin-top:4px; }
-.player-sample { font-size:13px; color:var(--text-3); font-style:italic; font-family:var(--f-mono); }
-
-.claude-oval { font-family:var(--f-mono); font-size:13px; padding:2px 9px; border-radius:20px; background:var(--purple-dim); color:var(--purple); border:1px solid rgba(167,139,250,0.3); cursor:pointer; transition:all .2s; white-space:nowrap; }
-.claude-oval:hover { background:rgba(167,139,250,0.25); }
-.claude-oval.loading { opacity:0.5; cursor:wait; }
-
-#player-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; }
-#player-modal.open { display:flex; }
-#player-modal-inner { background:var(--bg-panel); border:1px solid var(--border-hi); border-radius:12px; width:560px; max-height:80vh; overflow-y:auto; padding:20px 24px; }
-#modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-#modal-player-name { font-family:var(--f-head); font-size:22px; font-weight:700; color:var(--text-1); letter-spacing:1px; }
-#modal-close { font-size:18px; color:var(--text-3); background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; }
-#modal-close:hover { color:var(--text-1); background:var(--bg-hover); }
-.modal-section { margin-bottom:14px; }
-.modal-section-title { font-family:var(--f-head); font-size:13px; letter-spacing:2px; color:var(--text-3); text-transform:uppercase; margin-bottom:7px; padding-bottom:4px; border-bottom:1px solid var(--border); }
-.modal-stats-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
-.modal-stat-box { background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; padding:8px; text-align:center; }
-.modal-stat-val { font-family:var(--f-mono); font-size:18px; font-weight:500; color:var(--text-1); }
-.modal-stat-val.danger { color:var(--danger); }
-.modal-stat-val.warn   { color:var(--warning); }
-.modal-stat-val.good   { color:var(--accent); }
-.modal-stat-lbl { font-size:13px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; }
-.modal-profile-badge { display:inline-block; font-family:var(--f-mono); font-size:13px; padding:3px 12px; border-radius:20px; background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-glow); margin-bottom:10px; }
-#modal-narrative { font-size:13px; color:var(--warning); line-height:1.7; padding:12px; background:rgba(255,176,32,0.05); border:1px solid rgba(255,176,32,0.2); border-radius:6px; }
-#modal-narrative.loading { color:var(--text-3); font-style:italic; font-size:13px; background:var(--bg-panel-2); border-color:var(--border); }
-
-/* ── BOTTOM ROW ── /* ── BOTTOM ROW ── */
-#bottom-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 280px;
-  gap: 1px;
-  background: var(--border);
-  border-top: 1px solid var(--border);
-  max-height: 260px;
+.reason-item::before {
+  content: '▸';
+  color: var(--gold);
+  flex-shrink: 0;
+  font-size: 10px;
+  margin-top: 2px;
 }
+.reason-item.danger { color: #FCA5A5; }
+.reason-item.danger::before { color: var(--red); }
 
-#narrative-panel, #upload-panel {
-  background: var(--bg-panel);
-  padding: 14px 16px;
-  overflow-y: auto;
-}
-
-/* Narrative */
-.narrative-entry {
-  padding: 8px 0;
+/* Stage + stats bar */
+#stage-bar {
+  padding: 8px 14px;
+  display: flex;
+  gap: 4px;
   border-bottom: 1px solid var(--border);
 }
-
-.narrative-entry:last-child { border-bottom: none; }
-
-.narrative-meta {
-  font-family: var(--f-mono);
-  font-size:13px;
-  color: var(--text-3);
-  margin-bottom: 3px;
-}
-
-.narrative-text {
-  font-size: 13px;
-  color: var(--warning);
-  line-height: 1.5;
-}
-
-/* Upload panel */
-#upload-zone {
-  border: 1px dashed var(--border-hi);
-  border-radius: 8px;
-  padding: 16px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: 10px;
-}
-
-#upload-zone:hover { border-color: var(--accent); background: var(--accent-dim); }
-
-#upload-zone .uz-icon { font-size: 24px; margin-bottom: 6px; }
-#upload-zone .uz-text { font-size: 13px; color: var(--text-2); }
-#upload-zone .uz-sub  { font-size:13px; color: var(--text-3); margin-top: 3px; }
-
-#upload-input { display: none; }
-
-#upload-status {
-  font-family: var(--f-mono);
-  font-size: 13px;
-  color: var(--accent);
-  min-height: 16px;
-}
-
-.tool-btn {
-  width: 100%;
-  font-family: var(--f-head);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--text-2);
-  background: var(--bg-panel-2);
+.stage-pill {
+  padding: 3px 10px;
+  border-radius: 3px;
+  font-family: var(--f-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--t4);
+  background: var(--bg-card);
   border: 1px solid var(--border);
-  padding: 7px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-bottom: 6px;
   transition: all 0.2s;
 }
-
-.tool-btn:hover { border-color: var(--accent); color: var(--accent); }
-.tool-btn.primary { color: var(--accent); border-color: var(--accent-glow); background: var(--accent-dim); }
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
-
-/* Empty states */
-.empty-state {
-  font-size: 13px;
-  color: var(--text-3);
-  text-align: center;
-  padding: 20px;
-  font-family: var(--f-mono);
+.stage-pill.active {
+  background: var(--gold-dim);
+  border-color: var(--gold-glow);
+  color: var(--gold);
 }
+
+#stats-bar {
+  padding: 8px 14px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.stat-chip {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-family: var(--f-mono);
+  font-size: 10px;
+  color: var(--t3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+.stat-chip span { color: var(--t1); font-weight: 500; }
 
 /* Waiting state */
 #waiting-state {
@@ -747,133 +558,716 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 30px;
+  padding: 32px 16px;
+  gap: 10px;
+}
+.ws-icon { font-size: 32px; opacity: 0.2; }
+.ws-label {
+  font-family: var(--f-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--t4);
+}
+.ws-sub {
+  font-size: 11px;
+  color: var(--t4);
+  text-align: center;
+}
+
+/* ── CENTER: CARDS ──────────────────────────────────────────────────────────── */
+#center-panel { display: flex; flex-direction: column; }
+
+.cards-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cards-row {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  margin-bottom: 6px;
+}
+.cards-row:last-child { margin-bottom: 0; }
+
+.cards-row-label {
+  font-family: var(--f-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--t4);
+  width: 40px;
+  flex-shrink: 0;
 }
 
-#waiting-state .ws-icon { font-size: 28px; opacity: 0.3; }
-#waiting-state .ws-text { font-size: 13px; color: var(--text-3); font-family: var(--f-mono); }
+.card {
+  width: 42px;
+  height: 56px;
+  border-radius: 5px;
+  border: 1px solid var(--border-hi);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--f-mono);
+  gap: 1px;
+  position: relative;
+}
+.card .rank { font-size: 16px; font-weight: 500; line-height: 1; }
+.card .suit { font-size: 11px; line-height: 1; }
+.card.red  { color: #F87171; border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.05); }
+.card.black { color: var(--t1); border-color: rgba(255,255,255,0.15); }
+.card.hero  { border-color: var(--gold-glow); box-shadow: 0 0 12px var(--gold-dim); }
 
-/* Flush danger banner */
-#flush-banner {
+/* Carry alert */
+#carry-section {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
   display: none;
-  background: var(--danger-dim);
-  border: 1px solid rgba(255,61,61,0.4);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--danger);
-  font-weight: 500;
+}
+#carry-section.show { display: block; }
+
+#flush-banner {
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--blue);
+  background: var(--blue-dim);
+  border: 1px solid rgba(96,165,250,0.25);
+  margin-bottom: 8px;
+  display: none;
+}
+#flush-banner.show { display: block; }
+
+.carry-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-family: var(--f-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--gold);
 }
 
-#flush-banner.active { display: block; }
+#carry-cards {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.carry-chip {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--t2);
+  transition: all 0.2s;
+}
+.carry-chip.hot {
+  background: var(--gold-dim);
+  border-color: var(--gold-glow);
+  color: var(--gold);
+}
+
+/* Predicted cards */
+#predicted-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+#predicted-label {
+  font-family: var(--f-display);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--t3);
+  margin-bottom: 8px;
+}
+#predicted-cards {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.pred-card {
+  width: 34px;
+  height: 44px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--f-mono);
+  gap: 1px;
+  border: 1px solid var(--green-dim);
+  background: rgba(16,185,129,0.05);
+  color: var(--green);
+}
+.pred-card .rank { font-size: 13px; line-height: 1; }
+.pred-card .suit { font-size: 10px; line-height: 1; }
+
+/* Hand history */
+#history-section {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+#hand-history-list { padding: 8px 16px; }
+
+.history-entry {
+  display: grid;
+  grid-template-columns: 28px 52px 1fr auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.history-entry:last-child { border-bottom: none; }
+
+.h-num { font-family: var(--f-mono); font-size: 10px; color: var(--t4); padding-top: 2px; }
+.h-result {
+  font-family: var(--f-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding-top: 1px;
+}
+.h-result.won  { color: var(--green); }
+.h-result.lost { color: var(--red); }
+.h-result.fold { color: var(--t4); }
+
+.h-cards { font-family: var(--f-mono); font-size: 11px; color: var(--t2); }
+.h-note  { font-size: 10px; color: var(--gold); margin-top: 3px; line-height: 1.4; }
+.h-pending { font-size: 10px; color: var(--t4); font-style: italic; margin-top: 3px; }
+.h-pot { font-family: var(--f-mono); font-size: 10px; color: var(--t3); padding-top: 2px; }
+
+/* ── RIGHT: PLAYER HUB ──────────────────────────────────────────────────────── */
+#player-panel { display: flex; flex-direction: column; }
+#player-list { padding: 8px 12px; display: flex; flex-direction: column; gap: 8px; }
+
+.player-card {
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.player-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.player-card.danger { border-color: rgba(239,68,68,0.3); }
+.player-card.danger::before { background: var(--red); }
+.player-card.feeder { border-color: rgba(96,165,250,0.25); }
+.player-card.feeder::before { background: var(--blue); }
+.player-card.neutral::before { background: var(--border-md); }
+
+.p-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.p-name {
+  font-family: var(--f-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t1);
+}
+.p-tag {
+  font-family: var(--f-display);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+.p-tag.danger { background: var(--red-dim); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.25); }
+.p-tag.feeder { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+
+/* Big Four HUD */
+.hud-big4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.hud-stat { text-align: center; }
+.hud-val {
+  font-family: var(--f-mono);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--t1);
+  line-height: 1.1;
+}
+.hud-val.danger { color: #FCA5A5; }
+.hud-val.warn   { color: var(--gold); }
+.hud-val.good   { color: var(--green); }
+.hud-lbl {
+  font-family: var(--f-display);
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--t4);
+  text-transform: uppercase;
+}
+
+/* Win rate bar */
+.wr-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 4px 0;
+  overflow: hidden;
+}
+.wr-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+
+/* Pre-flop sub row */
+.hud-sub {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.hud-sub-stat { text-align: center; }
+.hud-sub-val { font-family: var(--f-mono); font-size: 11px; color: var(--t2); }
+.hud-sub-lbl { font-family: var(--f-display); font-size: 8px; color: var(--t4); letter-spacing: 0.5px; }
+
+/* Player bottom row */
+.p-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+.p-sample { font-size: 10px; color: var(--t4); font-family: var(--f-mono); }
+.claude-btn {
+  font-family: var(--f-display);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--purple-dim);
+  color: var(--purple);
+  border: 1px solid rgba(167,139,250,0.3);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.claude-btn:hover { background: rgba(167,139,250,0.2); }
+
+/* ── PLAYER MODAL ───────────────────────────────────────────────────────────── */
+#player-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#player-modal.open { display: flex; }
+#player-modal-inner {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  width: 580px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+#modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+#modal-player-name {
+  font-family: var(--f-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--t1);
+  letter-spacing: 1px;
+}
+#modal-close {
+  width: 32px; height: 32px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--t2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+#modal-close:hover { color: var(--t1); border-color: var(--border-hi); }
+.modal-sec { margin-bottom: 18px; }
+.modal-sec-title {
+  font-family: var(--f-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: var(--t3);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+#modal-profile {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  background: var(--gold-dim);
+  color: var(--gold);
+  border: 1px solid var(--gold-glow);
+  margin-bottom: 14px;
+}
+.modal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.modal-stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  text-align: center;
+}
+.modal-stat-val { font-family: var(--f-mono); font-size: 22px; font-weight: 500; color: var(--t1); }
+.modal-stat-val.danger { color: #FCA5A5; }
+.modal-stat-val.warn   { color: var(--gold); }
+.modal-stat-val.good   { color: var(--green); }
+.modal-stat-lbl { font-family: var(--f-display); font-size: 9px; letter-spacing: 1px; color: var(--t3); text-transform: uppercase; }
+#modal-narrative {
+  font-size: 13px;
+  color: var(--gold);
+  line-height: 1.7;
+  padding: 14px;
+  background: var(--gold-dim);
+  border: 1px solid var(--gold-glow);
+  border-radius: 6px;
+  white-space: pre-line;
+}
+#modal-narrative.loading { color: var(--t3); font-style: italic; background: var(--bg-card); border-color: var(--border); }
+.modal-ask-btn {
+  margin-top: 10px;
+  padding: 9px 20px;
+  border-radius: 6px;
+  background: var(--purple-dim);
+  border: 1px solid rgba(167,139,250,0.3);
+  color: var(--purple);
+  font-family: var(--f-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+.modal-ask-btn:hover { background: rgba(167,139,250,0.2); }
+
+/* ── BOTTOM STRIP ──────────────────────────────────────────────────────────── */
+.b-panel {
+  background: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.b-panel-content { flex: 1; overflow-y: auto; padding: 8px 14px 8px; }
+
+/* Narrative */
+.narr-entry {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.narr-entry:last-child { border-bottom: none; }
+.narr-meta {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  color: var(--t4);
+  margin-bottom: 4px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.narr-tag {
+  font-family: var(--f-display);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+.narr-tag.danger { background: var(--red-dim); color: #FCA5A5; }
+.narr-tag.warn   { background: var(--gold-dim); color: var(--gold); }
+.narr-text { font-size: 11px; color: var(--t2); line-height: 1.5; }
+
+/* Mem0 */
+.mem-entry { padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 10px; color: var(--t3); line-height: 1.4; }
+.mem-entry:last-child { border-bottom: none; }
+
+/* Knowledge */
+.know-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.know-row:last-child { border-bottom: none; }
+.know-k { font-family: var(--f-mono); font-size: 10px; color: var(--t3); }
+.know-v { font-family: var(--f-mono); font-size: 10px; color: var(--t1); }
+.know-v.gold   { color: var(--gold); }
+.know-v.danger { color: #FCA5A5; }
+.know-v.green  { color: var(--green); }
+
+/* Tools */
+#tools-panel { background: var(--bg-panel); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+
+#upload-zone {
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+#upload-zone:hover { border-color: var(--gold-glow); background: var(--gold-dim); }
+.uz-icon { font-size: 18px; display: block; margin-bottom: 3px; }
+.uz-text { font-size: 11px; color: var(--t2); font-weight: 500; }
+.uz-sub  { font-size: 10px; color: var(--t3); margin-top: 2px; }
+
+#upload-status { font-family: var(--f-mono); font-size: 10px; color: var(--gold); min-height: 14px; }
+
+.tool-btn {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--t2);
+  font-family: var(--f-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+.tool-btn:hover { border-color: var(--border-hi); color: var(--t1); background: var(--bg-hover); }
+.tool-btn.primary { background: var(--green-dim); border-color: rgba(16,185,129,0.3); color: var(--green); }
+.tool-btn.primary:hover { background: rgba(16,185,129,0.2); }
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  gap: 6px;
+  color: var(--t4);
+  text-align: center;
+}
+.empty-icon { font-size: 20px; opacity: 0.4; }
+.empty-text { font-size: 11px; line-height: 1.5; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 2px; }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
+<!-- ── HEADER ── -->
 <div id="header">
-  <div class="logo">♠ Poker <span>Advisor</span> Pro</div>
-  <div id="live-badge"><div class="dot"></div>LIVE</div>
-  <div id="session-info">SESSION —</div>
-  <div id="server-status">
-    <div class="status-pill err" id="ws-status">WS CONNECTING…</div>
-    <div class="status-pill err" id="mem0-status">MEM0 —</div>
-    <div class="status-pill err" id="claude-status">CLAUDE —</div>
-    <div class="status-pill ok"  id="hands-status">0 HANDS</div>
-    <button id="open-btn" onclick="window.open(window.location.href, '_blank')">↗ POPOUT</button>
+  <div class="logo">
+    <span class="logo-suit">♠</span>
+    POKER <em>ADVISOR</em> PRO
   </div>
+  <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+  <div id="session-info" style="font-family:var(--f-mono);font-size:11px;color:var(--t4)">SESSION —</div>
+  <div class="header-spacer"></div>
+  <div class="status-group">
+    <div class="s-indicator err" id="ws-status"><span class="s-dot"></span>WS</div>
+    <div class="s-indicator err" id="mem0-status"><span class="s-dot"></span>MEM0</div>
+    <div class="s-indicator err" id="claude-status"><span class="s-dot"></span>CLAUDE</div>
+    <div class="s-indicator warn" id="hands-status"><span class="s-dot"></span>0 HANDS</div>
+  </div>
+  <button class="popout-btn" onclick="window.open(window.location.href,'_blank','width=1440,height=900')">⊞ POPOUT</button>
 </div>
 
-<!-- MAIN GRID -->
-<div id="main-grid">
+<!-- ── APP ── -->
+<div id="app">
 
-  <!-- LEFT: DECISION -->
-  <div class="panel" id="decision-panel">
-    <div class="panel-label">Decision</div>
+  <!-- MAIN GRID -->
+  <div id="main-grid">
 
-    <div id="hero-turn-banner">▶ YOUR TURN</div>
+    <!-- LEFT: DECISION -->
+    <div class="panel" id="decision-panel">
+      <div id="your-turn-banner"><span class="turn-pulse"></span>YOUR TURN TO ACT</div>
 
-    <div id="action-display" class="check">
-      <div id="action-emoji">🃏</div>
-      <div id="action-text">WAITING</div>
-      <div id="action-sizing"></div>
-    </div>
-
-    <div id="flush-banner"></div>
-
-    <div id="bet-context-box">
-      <div class="bc-row"><span class="bc-label">AGGRESSOR</span><span class="bc-val" id="bc-aggressor">—</span></div>
-      <div class="bc-row"><span class="bc-label">THEIR BET</span><span class="bc-val" id="bc-their-bet">—</span></div>
-      <div class="bc-row"><span class="bc-label">YOUR BET</span><span class="bc-val" id="bc-your-bet">—</span></div>
-      <div class="bc-row"><span class="bc-label">CALL COSTS</span><span class="bc-val warn" id="bc-call">—</span></div>
-      <div class="bc-row"><span class="bc-label">POT SIZE</span><span class="bc-val" id="bc-pot">—</span></div>
-      <div class="bc-row"><span class="bc-label">EQUITY NEEDED</span><span class="bc-val warn" id="bc-equity">—</span></div>
-      <div id="pot-odds-bar"><div id="pot-odds-fill" style="width:0%"></div></div>
-    </div>
-
-    <div id="reasons-box">
-      <div id="reasons-list"><div class="empty-state">Waiting for cards…</div></div>
-    </div>
-
-    <div id="stage-bar">
-      <div class="stage-pill" id="sp-preflop">PRE</div>
-      <div class="stage-pill" id="sp-flop">FLOP</div>
-      <div class="stage-pill" id="sp-turn">TURN</div>
-      <div class="stage-pill" id="sp-river">RIVER</div>
-    </div>
-
-    <div id="model-stats">
-      <div class="stat-chip" id="ms-hands"><span>0</span> hands</div>
-      <div class="stat-chip" id="ms-carry"><span>0</span>% carry</div>
-      <div class="stat-chip" id="ms-dealer">btn: —</div>
-      <div class="stat-chip" id="ms-blinds">—/—</div>
-    </div>
-  </div>
-
-  <!-- CENTER: CARDS + CARRY + HISTORY -->
-  <div class="panel" style="padding:0; display:flex; flex-direction:column;">
-
-    <!-- Cards -->
-    <div id="cards-section">
-      <div class="panel-label">Cards</div>
-      <div id="hole-cards-row">
-        <div class="card-label">YOU</div>
-        <div id="hole-cards"></div>
+      <div id="action-display">
+        <span id="action-emoji">🃏</span>
+        <div id="action-text" class="action-wait">WAITING</div>
+        <div id="action-sizing"></div>
       </div>
-      <div id="board-cards-row">
-        <div class="card-label">BOARD</div>
-        <div id="board-cards"><span style="color:var(--text-3);font-family:var(--f-mono);font-size:13px">Preflop</span></div>
+
+      <div id="bet-context-box">
+        <div class="bc-row"><span class="bc-label">AGGRESSOR</span><span class="bc-val" id="bc-aggressor">—</span></div>
+        <div class="bc-row"><span class="bc-label">THEIR BET</span><span class="bc-val" id="bc-their-bet">—</span></div>
+        <div class="bc-row"><span class="bc-label">CALL COSTS</span><span class="bc-val highlight" id="bc-call">—</span></div>
+        <div class="bc-row"><span class="bc-label">POT SIZE</span><span class="bc-val" id="bc-pot">—</span></div>
+        <div class="bc-row"><span class="bc-label">EQUITY NEEDED</span><span class="bc-val highlight" id="bc-equity">—</span></div>
+        <div id="equity-bar-wrap"><div id="pot-odds-fill"></div></div>
+      </div>
+
+      <div id="reasons-list">
+        <div class="empty-state" style="padding:12px">
+          <div class="empty-text">Reasons appear when model is ready</div>
+        </div>
+      </div>
+
+      <div id="stage-bar">
+        <div class="stage-pill" id="sp-preflop">PRE</div>
+        <div class="stage-pill" id="sp-flop">FLOP</div>
+        <div class="stage-pill" id="sp-turn">TURN</div>
+        <div class="stage-pill" id="sp-river">RIVER</div>
+      </div>
+
+      <div id="stats-bar">
+        <div class="stat-chip"><span id="ms-hands">0</span> hands</div>
+        <div class="stat-chip"><span id="ms-carry">0</span>% carry</div>
+        <div class="stat-chip">btn: <span id="ms-dealer">—</span></div>
+        <div class="stat-chip"><span id="ms-blinds">—/—</span></div>
+      </div>
+
+      <div id="waiting-state">
+        <div class="ws-icon">🃏</div>
+        <div class="ws-label">WAITING</div>
+        <div class="ws-sub">Waiting for cards…</div>
       </div>
     </div>
 
-    <!-- Predicted -->
-    <div id="predicted-section">
-      <div class="panel-label" id="predicted-label">Predicted Cards</div>
-      <div id="predicted-cards"><div class="empty-state">Upload CSV or play hands to seed predictions</div></div>
+    <!-- CENTER: CARDS + BOARD -->
+    <div class="panel" id="center-panel">
+      <div class="sec-label">Cards &amp; Board</div>
+
+      <div class="cards-section">
+        <div class="cards-row">
+          <div class="cards-row-label">YOU</div>
+          <div id="hole-cards"></div>
+        </div>
+        <div class="cards-row" style="margin-top:8px">
+          <div class="cards-row-label">BOARD</div>
+          <div id="board-cards" style="display:flex;gap:5px;align-items:center">
+            <span style="font-family:var(--f-display);font-size:11px;letter-spacing:1px;color:var(--t4)">PREFLOP</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="carry-section">
+        <div id="flush-banner"></div>
+        <div class="carry-header">⚡ CARRY ALERT</div>
+        <div id="carry-cards"></div>
+        <div id="carry-flush-warnings" style="margin-top:6px"></div>
+        <div id="carry-hit-summary" style="font-size:10px;color:var(--t3);margin-top:4px;font-family:var(--f-mono)"></div>
+      </div>
+
+      <div id="predicted-section">
+        <div id="predicted-label" class="sec-label" style="padding:0;border:none;margin-bottom:8px">Predicted Cards</div>
+        <div id="predicted-cards">
+          <div class="empty-state" style="padding:8px"><div class="empty-text">Upload CSV or play hands to seed predictions</div></div>
+        </div>
+      </div>
+
+      <div id="history-section">
+        <div class="sec-label">Last Hands</div>
+        <div id="hand-history-list">
+          <div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No hands yet</div></div>
+        </div>
+      </div>
     </div>
 
-    <!-- Carry Alert -->
-    <div id="carry-section">
-      <div id="carry-header">⚡ CARRY ALERT — From Last Hand</div>
-      <div class="carry-cards" id="carry-cards"></div>
-      <div id="carry-flush-warnings"></div>
-      <div id="carry-hit-summary"></div>
+    <!-- RIGHT: PLAYER HUB -->
+    <div class="panel" id="player-panel">
+      <div class="sec-label">Player HUB <span class="sec-count" id="player-count">0</span></div>
+      <div id="player-list">
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <div class="empty-text">Players appear after hands are tracked</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Hand History -->
-    <div id="history-section" style="flex:1; overflow-y:auto;">
-      <div class="panel-label">Last Hands</div>
-      <div id="hand-history-list"><div class="empty-state">No hands yet</div></div>
-    </div>
-  </div>
+  </div><!-- end main-grid -->
 
-  <!-- RIGHT: PLAYER HUB -->
-  <div class="panel" id="player-panel">
-    <div class="panel-label">Player HUB — Full HUD</div>
-    <div id="player-list"><div class="empty-state">Players appear after hands are tracked</div></div>
-  </div>
-</div>
+  <!-- BOTTOM STRIP -->
+  <div id="bottom-strip">
+
+    <!-- Narrative Feed -->
+    <div class="b-panel">
+      <div class="sec-label" style="padding:10px 14px 6px">Narrative <span class="sec-count">Claude + Mem0</span></div>
+      <div class="b-panel-content">
+        <div id="narrative-list">
+          <div class="empty-state" style="padding:10px"><div class="empty-text">Narratives appear after each hand</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mem0 -->
+    <div class="b-panel">
+      <div class="sec-label" style="padding:10px 14px 6px">Memory <span class="sec-count">Mem0</span></div>
+      <div class="b-panel-content">
+        <div id="mem0-list">
+          <div class="empty-state" style="padding:10px"><div class="empty-text">Memories stored as hands are played</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Knowledge -->
+    <div class="b-panel">
+      <div class="sec-label" style="padding:10px 14px 6px">Knowledge Loop</div>
+      <div class="b-panel-content">
+        <div id="knowledge-list">
+          <div class="empty-state" style="padding:10px"><div class="empty-text">Waiting for first hand…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tools -->
+    <div id="tools-panel">
+      <div class="sec-label" style="padding:0 0 6px;border-bottom:1px solid var(--border)">Tools</div>
+      <div id="upload-zone" onclick="document.getElementById('upload-input').click()" style="margin-top:6px">
+        <span class="uz-icon">📂</span>
+        <div class="uz-text">Upload PokerNow CSV</div>
+        <div class="uz-sub">Seeds model + Mem0</div>
+      </div>
+      <input type="file" id="upload-input" accept=".csv" style="display:none">
+      <div id="upload-status"></div>
+      <button class="tool-btn primary" onclick="runAnalysis()">🔍 Full Analysis</button>
+      <button class="tool-btn" onclick="loadNarratives()">🧠 Refresh</button>
+    </div>
+
+  </div><!-- end bottom-strip -->
+
+</div><!-- end app -->
 
 <!-- PLAYER MODAL -->
 <div id="player-modal">
@@ -882,66 +1276,28 @@ body {
       <div id="modal-player-name">Player</div>
       <button id="modal-close" onclick="closePlayerModal()">✕</button>
     </div>
-    <div class="modal-section">
-      <div class="modal-section-title">Player Profile</div>
-      <div class="modal-profile-badge" id="modal-profile">—</div>
-      <div class="modal-stats-grid" id="modal-big4"></div>
+    <div class="modal-sec">
+      <div class="modal-sec-title">Profile</div>
+      <div id="modal-profile">—</div>
+      <div class="modal-grid" id="modal-big4"></div>
     </div>
-    <div class="modal-section">
-      <div class="modal-section-title">Pre-flop</div>
-      <div class="modal-stats-grid" id="modal-preflop"></div>
+    <div class="modal-sec">
+      <div class="modal-sec-title">Pre-flop</div>
+      <div class="modal-grid" id="modal-preflop"></div>
     </div>
-    <div class="modal-section">
-      <div class="modal-section-title">Post-flop</div>
-      <div class="modal-stats-grid" id="modal-postflop"></div>
+    <div class="modal-sec">
+      <div class="modal-sec-title">Post-flop</div>
+      <div class="modal-grid" id="modal-postflop"></div>
     </div>
-    <div class="modal-section">
-      <div class="modal-section-title">🧠 Claude Analysis</div>
-      <div id="modal-narrative" class="loading">Click "Ask Claude" to generate narrative…</div>
-      <button class="tool-btn" id="modal-claude-btn" style="margin-top:8px" onclick="askClaudeForPlayer()">🧠 Ask Claude</button>
+    <div class="modal-sec">
+      <div class="modal-sec-title">🧠 Claude Analysis</div>
+      <div id="modal-narrative" class="loading">Click Ask Claude to generate analysis…</div>
+      <button class="modal-ask-btn" id="modal-claude-btn" onclick="askClaudeForPlayer()">🧠 ASK CLAUDE</button>
     </div>
   </div>
 </div>
 
-<!-- BOTTOM ROW -->
-<div id="bottom-row" style="grid-template-columns: 1fr 1fr 1fr 280px;">
-
-  <!-- Narrative Feed -->
-  <div id="narrative-panel">
-    <div class="panel-label">Narrative Feed <span style="font-size:13px;color:var(--text-3)">(Mem0 + Claude · last 5 hands)</span></div>
-    <div id="narrative-list"><div class="empty-state">No narratives yet — play hands</div></div>
-  </div>
-
-  <!-- Mem0 Memories -->
-  <div id="narrative-panel" style="background:var(--bg-panel); padding:14px 16px; overflow-y:auto;">
-    <div class="panel-label">Mem0 Memories</div>
-    <div id="mem0-list"><div class="empty-state">Memories appear here as hands are played</div></div>
-  </div>
-
-  <!-- Knowledge Panel — what Mem0/Letta is learning -->
-  <div style="background:var(--bg-panel); padding:14px 16px; overflow-y:auto;">
-    <div class="panel-label">Knowledge Loop</div>
-    <div id="knowledge-list"><div class="empty-state">Waiting for first hand…</div></div>
-  </div>
-
-  <!-- Upload + Tools -->
-  <div id="upload-panel">
-    <div class="panel-label">Tools</div>
-
-    <div id="upload-zone" onclick="document.getElementById('upload-input').click()">
-      <div class="uz-icon">📂</div>
-      <div class="uz-text">Upload PokerNow CSV Log</div>
-      <div class="uz-sub">Seeds model + syncs to Railway + Mem0</div>
-    </div>
-    <input type="file" id="upload-input" accept=".csv">
-    <div id="upload-status"></div>
-
-    <button class="tool-btn primary" onclick="runAnalysis()">🔍 Run Full Analysis</button>
-    <button class="tool-btn" onclick="loadNarratives()">🧠 Refresh Narratives</button>
-    <button class="tool-btn" onclick="loadMem0()">💾 Refresh Mem0</button>
-    <button class="tool-btn" onclick="loadProof()">📋 Session Proof</button>
-  </div>
-</div>
+</body>
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -972,6 +1328,7 @@ async function initSession() {
       if (d.ok && d.game_id) {
         SESSION = d.game_id;
         GAME_ID = d.game_id;
+        if (d.extension_id) window._EXT_ID = d.extension_id;
         document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
         connectWS();
         loadInitialState();
@@ -1028,6 +1385,15 @@ function connectWS() {
         renderAll();
 
       } else if (msg.type === 'weight_updates') {
+          // Forward weight_updates to extension for chrome.storage persistence
+          if (window._EXT_ID && msg.data && msg.data.weight_updates) {
+            try {
+              chrome.runtime.sendMessage(window._EXT_ID, {
+                type: 'WEIGHT_UPDATE',
+                weights: msg.data.weight_updates
+              });
+            } catch(e) {}
+          }
         // Letta/Claude returned weight_updates — patch onto local model
         // These affect next hand's getAdvice() decisions:
         // carryBoost → boosts carry signal
@@ -1086,7 +1452,7 @@ function setStatus(id, text, cls) {
   const el = document.getElementById(id);
   if (!el) return;
   el.textContent = text;
-  el.className = 'status-pill ' + cls;
+  el.className = 's-indicator ' + cls;
 }
 
 // ── CARD HTML ─────────────────────────────────────────────────────────────────
@@ -1150,13 +1516,29 @@ function renderDecision(d) {
   const vc = (dec.vClass || 'check').toLowerCase();
   box.className = vc;
   emoji.textContent = dec.emoji || '';
+  const prevAction = text.textContent;
+  if (prevAction !== (dec.action || '—')) {
+    text.style.animation = 'none';
+    requestAnimationFrame(() => {
+      text.style.animation = '';
+      text.classList.remove('action-snap');
+      void text.offsetWidth;
+      text.classList.add('action-snap');
+    });
+  }
   text.textContent  = dec.action || '—';
   sizing.textContent = dec.sizing ? dec.sizing : '';
 
   // Hero turn banner
-  const banner = document.getElementById('hero-turn-banner');
-  if (d.is_hero_turn) banner.classList.add('active');
-  else banner.classList.remove('active');
+  const banner = document.getElementById('your-turn-banner');
+  const decPanel = document.getElementById('decision-panel');
+  if (d.is_hero_turn) {
+    banner.classList.add('show');
+    decPanel.classList.add('your-turn');
+  } else {
+    banner.classList.remove('show');
+    decPanel.classList.remove('your-turn');
+  }
 
   // Flush danger banner
   const flushBanner = document.getElementById('flush-banner');
@@ -1181,7 +1563,7 @@ function renderDecision(d) {
     document.getElementById('bc-equity').textContent = equity + '%';
     document.getElementById('pot-odds-fill').style.width = Math.min(equity, 100) + '%';
     document.getElementById('pot-odds-fill').style.background =
-      equity > 40 ? '#00d4a4' : equity > 25 ? '#ffb020' : '#ff3d3d';
+      equity > 40 ? 'var(--green)' : equity > 25 ? 'var(--gold)' : 'var(--red)';
   } else {
     ctxBox.style.display = 'none';
   }
@@ -1316,6 +1698,8 @@ function renderPlayerHub(d) {
     .filter(([,s]) => (s.handsTracked||0) >= 1)
     .sort((a,b) => (b[1].handsTracked||0) - (a[1].handsTracked||0));
 
+  const countEl = document.getElementById('player-count');
+  if (countEl) countEl.textContent = players.length;
   if (!players.length) return;
 
   const el = document.getElementById('player-list');
@@ -1325,8 +1709,8 @@ function renderPlayerHub(d) {
     const isDanger = s.isDanger || (s.winRate >= 60 && (s.handsTracked||0) >= 5);
     const isFeeder = !isDanger && s.winRate < 35 && (s.handsTracked||0) >= 5;
     const entryCls = isDanger ? 'danger' : isFeeder ? 'feeder' : '';
-    const tag      = isDanger ? '<span class="player-tag danger">⚠ DANGER</span>' :
-                     isFeeder ? '<span class="player-tag feeder">↗ FEEDER</span>' : '';
+    const tag      = isDanger ? '<span class="p-tag danger">⚠ DANGER</span>' :
+                     isFeeder ? '<span class="p-tag feeder">↗ FEEDER</span>' : '';
 
     const vpip = s.vpip || 0;
     const pfr  = s.pfr  || 0;
@@ -1347,9 +1731,9 @@ function renderPlayerHub(d) {
     const stackLine = snapData.stack ? `<span>Stack: ${snapData.stack}</span>` : '';
     const lastHand  = snapData.handMessage ? `<span>${snapData.handMessage}</span>` : '';
 
-    return `<div class="player-entry ${entryCls}">
-      <div class="pname-row">
-        <span class="player-name">${short}</span>
+    return `<div class="player-card ${entryCls}">
+      <div class="p-name-row">
+        <span class="p-name">${short}</span>
         ${tag}
       </div>
       <div class="hud-big4">
@@ -1364,9 +1748,9 @@ function renderPlayerHub(d) {
         <div class="hud-pf-stat"><div class="hud-pf-val">${wtsd}%</div><div class="hud-pf-lbl">WTSD</div></div>
         <div class="hud-pf-stat"><div class="hud-pf-val">${wsd}%</div><div class="hud-pf-lbl">W$SD</div></div>
       </div>
-      <div class="player-bottom-row">
-        <span class="player-sample">${s.handsTracked||0}h ${lastHand || stackLine}</span>
-        <button class="claude-oval" onclick="openPlayerModal('${name.replace(/'/g,"\\'")}')">🧠 Claude</button>
+      <div class="p-bottom">
+        <span class="p-sample">${s.handsTracked||0}h ${lastHand || stackLine}</span>
+        <button class="claude-btn" onclick="openPlayerModal('${name.replace(/'/g,"\\'")}')">🧠 Claude</button>
       </div>
     </div>`;
   }).join('');
@@ -1377,7 +1761,7 @@ function openPlayerModal(playerName) {
   const s = state.playerStats[playerName];
   if (!s) return;
 
-  document.getElementById('modal-player-name').textContent = playerName;
+  document.getElementById('modal-p-name').textContent = playerName;
   document.getElementById('player-modal').classList.add('open');
 
   // Profile label
@@ -1520,87 +1904,27 @@ function renderKnowledge() {
   const dangerList = Object.entries(players).filter(([,s]) => s.isDanger).map(([n]) => n);
   const feederList = Object.entries(players).filter(([,s]) => s.isFeeder).map(([n]) => n);
 
-  let html = '';
+  const rows = [
+    ['carryBoost',    (patch.carryBoost||0).toFixed(1),         (patch.carryBoost||0)>0 ? 'gold' : ''],
+    ['dangerWarning', patch.jeezyWarning ? 'ACTIVE' : 'false',  patch.jeezyWarning ? 'danger' : ''],
+    ['allinWarning',  patch.allinWarning ? 'ACTIVE' : 'false',  patch.allinWarning ? 'danger' : ''],
+    ['hotCards',      (patch.hotCards||[]).join(' ')||'—',       (patch.hotCards||[]).length ? 'gold' : ''],
+    ['live WR',       (wu.live_wr||'—')+'%',                    'green'],
+    ['carry rate',    (wu.carry_rate||'—')+'%',                 (wu.carry_rate||0)>35 ? 'gold' : ''],
+    ['danger',        dangerList.join(', ')||'none',             dangerList.length ? 'danger' : ''],
+    ['narratives',    narratives.length+'',                      'green'],
+  ];
 
-  // ── Active model patch ────────────────────────────────────────────────────
-  html += `<div class="modal-section">
-    <div class="modal-section-title">Active Model Patch</div>
-    <div style="font-family:var(--f-mono);font-size:13px">
-      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--text-3)">carryBoost</span>
-        <span style="color:${(patch.carryBoost||0)>0?'var(--warning)':'var(--text-3)'}">${patch.carryBoost||0}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--text-3)">dangerWarning</span>
-        <span style="color:${patch.jeezyWarning?'var(--danger)':'var(--text-3)'}">${patch.jeezyWarning||false}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--text-3)">allinWarning</span>
-        <span style="color:${patch.allinWarning?'var(--danger)':'var(--text-3)'}">${patch.allinWarning||false}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0">
-        <span style="color:var(--text-3)">hotCards</span>
-        <span style="color:var(--accent)">${(patch.hotCards||[]).join(' ')||'—'}</span>
-      </div>
-    </div>
-  </div>`;
+  let html = rows.map(([k,v,cls]) => `<div class="know-row"><span class="know-k">${k}</span><span class="know-v ${cls}">${v}</span></div>`).join('');
 
-  // ── What Letta knows ──────────────────────────────────────────────────────
-  html += `<div class="modal-section">
-    <div class="modal-section-title">What Letta Knows</div>
-    <div style="font-family:var(--f-mono);font-size:13px">
-      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--text-3)">Letta status</span>
-        <span style="color:var(--warning)">Claude fallback</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--text-3)">Narratives generated</span>
-        <span style="color:var(--accent)">${narratives.length}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--text-3)">Live win rate</span>
-        <span style="color:var(--accent)">${wu.live_wr||'—'}%</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--text-3)">Carry rate</span>
-        <span style="color:${(wu.carry_rate||0)>35?'var(--warning)':'var(--text-2)'}">${wu.carry_rate||'—'}%</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-        <span style="color:var(--text-3)">Danger players</span>
-        <span style="color:var(--danger)">${dangerList.join(', ')||'none'}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0">
-        <span style="color:var(--text-3)">Feeder players</span>
-        <span style="color:var(--info)">${feederList.join(', ')||'none'}</span>
-      </div>
-    </div>
-  </div>`;
-
-  // ── Last narrative ────────────────────────────────────────────────────────
   if (wu.next_hand) {
-    html += `<div class="modal-section">
-      <div class="modal-section-title">Last Letta Note</div>
-      <div style="font-size:13px;color:var(--warning);line-height:1.6;padding:8px;background:rgba(255,176,32,0.05);border:1px solid rgba(255,176,32,0.15);border-radius:5px">${wu.next_hand}</div>
-      <div style="font-size:13px;color:var(--text-3);margin-top:4px;font-family:var(--f-mono)">Hand #${wu.hand_num||'?'}</div>
-    </div>`;
+    html += `<div style="margin-top:8px;padding:8px;border-radius:4px;background:var(--gold-dim);border:1px solid rgba(245,166,35,0.15);font-size:10px;color:var(--gold);line-height:1.5">${wu.next_hand}</div>`;
   }
 
-  // ── Learning loop diagram ─────────────────────────────────────────────────
-  html += `<div class="modal-section">
-    <div class="modal-section-title">Learning Loop</div>
-    <div style="font-size:13px;color:var(--text-3);line-height:2;font-family:var(--f-mono)">
-      <div><span style="color:var(--accent)">DOM</span> → Extension → /raw → Dashboard</div>
-      <div><span style="color:var(--accent)">Hand ends</span> → /hand → Mem0 store</div>
-      <div><span style="color:var(--accent)">LangGraph</span> → Mem0 retrieve → Letta</div>
-      <div><span style="color:var(--accent)">weight_updates</span> → model.js patch</div>
-      <div><span style="color:var(--accent)">Next hand</span> decisions updated ✓</div>
-    </div>
-  </div>`;
+  el.innerHTML = html || '<div class="empty-state" style="padding:10px"><div class="empty-text">Waiting for first hand…</div></div>';
+  return;
 
-  el.innerHTML = html;
-}
 
-// ── MEM0 ──────────────────────────────────────────────────────────────────────
 function renderMem0(entries) {
   const el = document.getElementById('mem0-list');
   if (!entries || !entries.length) {
@@ -1696,24 +2020,55 @@ document.getElementById('upload-input').addEventListener('change', async e => {
   if (!file) return;
   const stat = document.getElementById('upload-status');
   stat.textContent = 'Parsing CSV…';
+  stat.style.color = 'var(--gold)';
 
   try {
     const text = await file.text();
-    // POST raw CSV to server for parsing
-    const r = await fetch(`${SERVER}/upload_csv`, {
+    const gid = SESSION || GAME_ID || '';
+    const r = await fetch(`${SERVER}/upload_csv?game_id=${encodeURIComponent(gid)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: text
     });
     const data = await r.json();
     if (data.ok) {
-      stat.textContent = `✓ ${data.hands} hands uploaded — syncing to Mem0…`;
-      setTimeout(() => stat.textContent = `✓ ${data.hands} hands trained!`, 3000);
+      stat.textContent = `✓ ${data.hands} hands stored → DB`;
+      stat.style.color = 'var(--green)';
+
+      // Send model JSON directly to extension background.js via chrome.runtime.sendMessage
+      // Extension background.js stores it in chrome.storage as 'pnModel'
+      if (data.model && data.model.totalHands > 0 && window._EXT_ID) {
+        try {
+          chrome.runtime.sendMessage(window._EXT_ID,
+            { type: 'MODEL_UPDATE', model: data.model },
+            (resp) => {
+              if (resp && resp.ok) {
+                console.log('[dashboard] Model sent to extension:', resp.hands, 'hands');
+              }
+            }
+          );
+        } catch(e) {
+          console.warn('[dashboard] Could not send model to extension:', e);
+        }
+      }
+
+      setTimeout(() => {
+        stat.textContent = '⚡ LangGraph analyzing patterns…';
+        stat.style.color = 'var(--gold)';
+      }, 1500);
+      setTimeout(() => {
+        const cr = data.model?.carryRate || 0;
+        const tc = (data.model?.topCards || []).slice(0,3).join(' ');
+        stat.textContent = `✓ ${data.hands} hands | carry ${cr}% | top: ${tc}`;
+        stat.style.color = 'var(--green)';
+      }, 4000);
     } else {
       stat.textContent = '⚠ ' + (data.error || 'Upload failed');
+      stat.style.color = 'var(--red)';
     }
   } catch(err) {
     stat.textContent = '⚠ ' + err.message;
+    stat.style.color = 'var(--red)';
   }
 });
 
@@ -1726,5 +2081,4 @@ renderKnowledge();
 setInterval(loadNarratives, 5000);
 setInterval(renderKnowledge, 10000);
 </script>
-</body>
 </html>
