@@ -803,16 +803,16 @@ EARLY_POS = {'hole_1','hole_2','flop_1','flop_2','flop_3'}
 
 def build_model_from_db(game_id: str) -> dict:
     """
-    Build the poker model from all hands in SQLite for this game.
-    Segments by player count — 3-4, 5-6, 7+ players have different carry patterns.
-    Confidence is data-driven: tracks carry rate rolling stability, not hardcoded thresholds.
+    Build the poker model from ALL hands across ALL games in SQLite.
+    PokerNow's shuffle bias is platform-wide — every game contributes signal.
+    The more total hands we have, the better the carry predictions.
+    game_id is kept for logging only.
     """
     try:
         with get_db() as db:
             rows = db.execute(
                 "SELECT hole_cards, board, player_count FROM hands "
-                "WHERE game_id=? AND hole_cards IS NOT NULL ORDER BY hand_num ASC",
-                (game_id,)
+                "WHERE hole_cards IS NOT NULL ORDER BY id ASC"
             ).fetchall()
     except Exception as e:
         print(f"[model] DB error: {e}")
@@ -1573,6 +1573,63 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             await websocket.send_json({"type": "raw", "data": state})
         except Exception:
             pass
+
+    # ── Auto-seed model from DB on connect ────────────────────────────────────
+    # If we have hands stored for this game_id, send model immediately
+    # so dashboard populates without needing a CSV upload
+    try:
+        with get_db() as db:
+            hand_count = db.execute(
+                "SELECT COUNT(*) as n FROM hands WHERE hole_cards IS NOT NULL"
+            ).fetchone()["n"]
+            game_hand_count = db.execute(
+                "SELECT COUNT(*) as n FROM hands WHERE game_id=? AND hole_cards IS NOT NULL",
+                (session_id,)
+            ).fetchone()["n"]
+        if hand_count > 0:
+            model = build_model_from_db(session_id)
+            # Also load player stats
+            # Load from global_players — cross-session stats, keyed by player_id
+            with get_db() as db:
+                grows = db.execute(
+                    "SELECT * FROM global_players ORDER BY total_hands DESC LIMIT 100"
+                ).fetchall()
+            def _gpct(r):
+                h  = r["total_hands"]   or 1
+                pa = r["total_passive"] or 1
+                sd = r["showdown_count"] or 1
+                return {
+                    **dict(r),
+                    "all_names":    json.loads(r["all_names"] or "[]"),
+                    "vpip_pct":     round(r["vpip_count"]    / h  * 100, 1),
+                    "pfr_pct":      round(r["pfr_count"]     / h  * 100, 1),
+                    "win_pct":      round(r["win_count"]     / h  * 100, 1),
+                    "af":           round(r["total_agg"]     / pa, 2),
+                    "wsd_pct":      round(r["showdown_wins"] / sd * 100, 1),
+                    "threebet_pct": round(r["threebet_count"]/ h  * 100, 1),
+                    "handsTracked": r["total_hands"],
+                    "isDanger":     (r["win_count"] / h * 100) >= 60 and h >= 10,
+                }
+            # Key by display_name so dashboard can match to live player names
+            players = {}
+            for r in grows:
+                p = _gpct(r)
+                players[p["display_name"]] = p
+                # Also key by all known names
+                for name in p["all_names"]:
+                    players[name] = p
+            await websocket.send_json({
+                "type": "model_seed",
+                "data": {
+                    "model":            model,
+                    "hand_count":       hand_count,
+                    "game_hand_count":  game_hand_count,
+                    "game_id":          session_id,
+                    "player_stats":     players,
+                }
+            })
+    except Exception as e:
+        pass  # never block connection on model seed failure
     try:
         while True:
             await websocket.receive_text()
