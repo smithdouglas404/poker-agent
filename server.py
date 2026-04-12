@@ -681,7 +681,7 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS global_players (
-            player_id       TEXT PRIMARY KEY,   -- "q_yuipwavF" from "Pookie @ q_yuipwavF"
+            player_id       TEXT PRIMARY KEY,   -- stable @ ID extracted from display name
             display_name    TEXT,               -- most recent display name
             all_names       TEXT DEFAULT '[]',  -- JSON array of all names seen
             first_seen      TEXT DEFAULT (datetime('now')),

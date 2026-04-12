@@ -59,7 +59,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .tab-content.active{display:flex;flex-direction:column}
 
 /* LIVE TAB */
-#main-grid{display:grid;grid-template-columns:215px 1fr 255px;gap:1px;background:var(--border);flex:1;min-height:0;overflow:hidden}
+#main-grid{display:grid;grid-template-columns:300px 1fr 300px;gap:1px;background:var(--border);flex:1;min-height:0;overflow:hidden}
 .panel{background:var(--bg-panel);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border-md) transparent}
 
 /* DECISION PANEL */
@@ -70,7 +70,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .turn-pulse{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1s infinite}
 #tilt-banner{display:none;align-items:center;justify-content:center;gap:6px;padding:5px 12px;background:rgba(255,85,85,0.08);border-bottom:1px solid rgba(255,85,85,0.2);font-size:13px;font-weight:700;letter-spacing:1px;color:#ff9b9b}
 #tilt-banner.show{display:flex}
-#action-display{padding:14px 12px 10px;border-bottom:1px solid var(--border);text-align:center}
+#action-display{padding:18px 16px 14px;border-bottom:1px solid var(--border);text-align:center;display:none}
 #action-emoji{font-size:20px;margin-bottom:5px;display:block}
 #action-text{font-size:36px;font-weight:700;line-height:1;margin-bottom:2px;transition:color 0.3s}
 #decision-panel.your-turn #action-text{animation:snapIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards}
@@ -80,7 +80,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 #action-sizing{font-family:var(--f-mono);color:var(--t2)}
 #hand-strength{font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-top:4px;min-height:14px;transition:color 0.3s}
 #hand-strength.strong{color:var(--warning)}#hand-strength.made{color:var(--green)}#hand-strength.draw{color:var(--blue)}#hand-strength.nothing{color:var(--t4)}
-#confidence-bar-wrap{margin-top:8px;padding:0 2px}
+#confidence-bar-wrap{margin-top:10px;padding:0 4px}
 #confidence-label{display:flex;justify-content:space-between;font-family:var(--f-mono);color:var(--t2);margin-bottom:3px}
 #confidence-label span{color:var(--green);font-weight:700}
 #confidence-track{height:4px;background:var(--border-md);border-radius:2px;overflow:hidden}
@@ -94,21 +94,21 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .bc-val{color:var(--t1);font-family:var(--f-mono)}.bc-val.highlight{color:var(--warning)}
 #equity-bar-wrap{height:3px;background:var(--border-md);border-radius:1px;margin-top:6px;overflow:hidden}
 #pot-odds-fill{height:100%;border-radius:1px;background:var(--green);transition:width 0.5s;width:0%}
-#reasons-list{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
+#reasons-list{padding:10px 16px;border-bottom:1px solid var(--border);display:none;flex-direction:column;gap:6px}
 .reason-item{display:flex;align-items:flex-start;gap:6px;font-size:13px;color:var(--t2);line-height:1.4}
 .reason-item::before{content:'▸';color:var(--green);flex-shrink:0;font-size:13px;margin-top:2px}
 .reason-item.danger{color:#ff9b9b}.reason-item.danger::before{color:var(--red)}
-#stage-bar{padding:6px 12px;display:flex;gap:3px;border-bottom:1px solid var(--border)}
-.stage-pill{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t4);background:var(--bg-card);border:1px solid var(--border);transition:all 0.2s}
+#stage-bar{padding:8px 14px;display:none;gap:5px;border-bottom:1px solid var(--border)}
+.stage-pill{padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:0.5px;color:var(--t4);background:var(--bg-card);border:1px solid var(--border);transition:all 0.2s}
 .stage-pill.active{background:rgba(0,212,164,0.1);border-color:rgba(0,212,164,0.3);color:var(--green)}
-#stats-bar{padding:5px 12px;display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+#stats-bar{padding:7px 14px;display:none;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
 .stat-chip{padding:2px 7px;border-radius:4px;font-family:var(--f-mono);font-size:13px;color:var(--t3);background:var(--bg-card);border:1px solid var(--border)}
 .stat-chip span{color:var(--t1);font-weight:700}
 #flush-banner{padding:5px 10px;border-radius:5px;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(88,166,255,0.25);margin-bottom:6px;display:none}
 #flush-banner.active{display:block}
 #table-dynamic-wrap{padding:5px 12px;border-bottom:1px solid var(--border);color:var(--t2);display:none}
-#waiting-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;gap:8px;flex:1}
-.ws-icon{font-size:28px;opacity:0.15}.ws-label{font-size:20px;font-weight:700;letter-spacing:3px;color:var(--t4)}.ws-sub{color:var(--t4);text-align:center}
+
+.ws-icon{font-size:28px;opacity:0.15}.ws-label{font-size:18px;font-weight:700;letter-spacing:2px;color:var(--t4)}.ws-sub{color:var(--t4);text-align:center}
 
 /* SECTION LABEL */
 .sec-label{font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t1);padding:8px 12px 6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
@@ -212,7 +212,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .modal-ask-btn:hover{background:rgba(188,140,255,0.2)}
 
 /* BOTTOM STRIP */
-#bottom-strip{display:grid;grid-template-columns:1fr 1fr 1fr 185px;gap:1px;background:var(--border);min-height:170px;max-height:170px;flex-shrink:0;border-top:1px solid var(--border-md)}
+#bottom-strip{display:grid;grid-template-columns:1fr 1fr 175px 270px;gap:1px;background:var(--border);min-height:185px;max-height:185px;flex-shrink:0;border-top:1px solid var(--border-md)}
 .b-panel{background:var(--bg-panel);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 .b-panel:last-child{border-right:none}
 .b-panel-content{flex:1;overflow-y:auto;padding:6px 12px}
@@ -406,14 +406,10 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
           <div class="bc-row"><span class="bc-label">EQUITY NEEDED</span><span class="bc-val highlight" id="bc-equity">—</span></div>
           <div id="equity-bar-wrap"><div id="pot-odds-fill"></div></div>
         </div>
-        <div id="table-dynamic-bar" id="table-dynamic-wrap" style="padding:5px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--t2);display:none">
+        <div id="table-dynamic-wrap" style="padding:5px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--t2);display:none">
           <span id="table-dynamic"></span>
         </div>
-        <div id="waiting-state">
-          <div class="ws-icon">🃏</div>
-          <div class="ws-label">WAITING</div>
-          <div class="ws-sub">Play a hand to begin</div>
-        </div>
+
       </div>
 
       <div class="panel" id="center-panel">
@@ -439,11 +435,21 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
         </div>
         <div id="predicted-section">
           <div id="predicted-label" class="sec-label" style="padding:0;border:none;margin-bottom:6px">Predicted Cards</div>
-          <div id="predicted-cards"><div class="empty-state" style="padding:6px"><div class="empty-text">Upload CSV to enable predictions</div></div></div>
+          <div id="predicted-cards"><div class="empty-state" style="padding:6px"><div class="empty-text">Play hands to enable predictions</div></div></div>
         </div>
         <div id="history-section">
           <div class="sec-label">Last Hands</div>
           <div id="hand-history-list"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No hands yet</div></div></div>
+        </div>
+        <div id="carry-analysis-section" style="border-top:1px solid var(--border);padding:10px 14px;flex-shrink:0">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:8px">CARRY RATE BY PLAYER COUNT</div>
+          <div id="carry-by-pc-bars" style="display:flex;flex-direction:column;gap:5px">
+            <div style="font-size:11px;color:var(--t3);font-family:var(--f-mono)">Play hands to build carry data…</div>
+          </div>
+          <div style="margin-top:10px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:6px" id="carry-table-label">TOP CARRY CARDS</div>
+            <div id="carry-top-cards" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+          </div>
         </div>
       </div>
 
@@ -516,7 +522,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
         </div>
         <div class="a-box">
           <div class="a-box-title">Carry Heat Map — Top Cards This Session</div>
-          <div id="carry-heatmap"><div class="empty-state" style="padding:8px"><div class="empty-text">Upload CSV or play hands to build heat map</div></div></div>
+          <div id="carry-heatmap"><div class="empty-state" style="padding:8px"><div class="empty-text">Play hands to build heat map</div></div></div>
         </div>
       </div>
       <div class="a-panel">
@@ -792,13 +798,14 @@ function cardHTML(cardStr, type, connecting) {
   const star = connecting ? '<span class="connect-star">★</span>' : '';
   return `<div class="card ${cls}">${star}<div class="rank">${rank}</div><div class="suit">${suit}</div></div>`;
 }
-function predCardHTML(cardStr, connecting) {
+function predCardHTML(cardStr, connecting, carryPct) {
   if (!cardStr) return '';
   const suit = cardStr.slice(-1);
   const rank = cardStr.slice(0,-1);
   const suitClass = suit==='♥'?'hearts':suit==='♦'?'diamonds':suit==='♠'?'spades':'clubs';
   const cls = [suitClass, connecting?'connecting':''].filter(Boolean).join(' ');
-  return `<div class="pred-card ${cls}"><div class="rank">${rank}</div><div class="suit">${suit}</div></div>`;
+  const pctHtml = carryPct > 0 ? `<div style="font-size:10px;color:var(--green);font-family:var(--f-mono);line-height:1;margin-top:2px">${carryPct.toFixed(1)}%</div>` : '';
+  return `<div class="pred-card ${cls}" style="height:auto;min-height:52px;padding:5px 2px;justify-content:center"><div class="rank">${rank}</div><div class="suit">${suit}</div>${pctHtml}</div>`;
 }
 
 // ── RENDER ALL ─────────────────────────────────────────────────────────────────
@@ -818,14 +825,24 @@ function renderDecision(d) {
   const text = document.getElementById('action-text');
   const sizing = document.getElementById('action-sizing');
 
-  if (!d.model_ready && (!dec || !dec.action)) {
-    box.className = 'check';
-    emoji.textContent = '📂';
-    text.textContent = 'UPLOAD CSV';
-    sizing.textContent = 'Open dashboard tools panel to seed model';
+  const reasonsList = document.getElementById('reasons-list');
+  const stageBar = document.getElementById('stage-bar');
+  const statsBar = document.getElementById('stats-bar');
+
+  if (!dec || !dec.action) {
+    // No action yet — show action-display faded, hide details
+    box.style.display = '';
+    box.style.opacity = '0.3';
+    if (reasonsList) reasonsList.style.display = 'none';
+    if (stageBar) stageBar.style.display = 'none';
+    if (statsBar) statsBar.style.display = 'none';
     return;
   }
-  if (!dec || !dec.action) return;
+  box.style.opacity = '1';
+  box.style.display = '';
+  if (reasonsList) reasonsList.style.display = 'flex';
+  if (stageBar) stageBar.style.display = 'flex';
+  if (statsBar) statsBar.style.display = 'flex';
 
   const vc = (dec.vClass || 'check').toLowerCase();
   box.className = vc;
@@ -925,13 +942,16 @@ function renderPredicted(d) {
   const labelEl = document.getElementById('predicted-label');
   if (labelEl && dec.nextLabel) labelEl.textContent = dec.nextLabel;
   const el = document.getElementById('predicted-cards');
-  if (!top10.length) { el.innerHTML = '<div class="empty-state" style="padding:6px"><div class="empty-text">Upload CSV to enable predictions</div></div>'; return; }
+  if (!top10.length) { el.innerHTML = '<div class="empty-state" style="padding:6px"><div class="empty-text">Play hands to enable predictions</div></div>'; return; }
+  const carryHot = state.raw?.carry_alert?.topCarry || [];
+  const carryPctMap = {};
+  carryHot.forEach(c => { if(c && c.card) carryPctMap[c.card] = c.pct || 0; });
   el.innerHTML = top10.map(item => {
     const card = item.card || item;
     const suit = card.slice(-1);
     const rank = card.slice(0,-1);
     const connecting = holeRanks.includes(rank) || holeSuits.includes(suit);
-    return predCardHTML(card, connecting);
+    return predCardHTML(card, connecting, carryPctMap[card] || 0);
   }).join('');
 }
 
@@ -1015,7 +1035,7 @@ function renderPlayerHub(d) {
 function renderHandHistory() {
   const el = document.getElementById('hand-history-list');
   if (!state.handHistory.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No hands yet</div></div>'; return; }
-  el.innerHTML = [...state.handHistory].reverse().map(h => {
+  el.innerHTML = [...state.handHistory].reverse().slice(0,2).map(h => {
     const resCls = h.result==='WON'?'won':h.result==='FOLDED'?'folded':'lost';
     const noteHTML = h.pending ? '<div class="hand-pending">⏳ analyzing…</div>' : h.note ? `<div class="hand-note">${h.note}</div>` : '';
     return `<div class="hand-entry"><div class="hand-num">#${h.hand_num}</div><div class="hand-result ${resCls}">${h.result}</div><div><div class="hand-cards">${h.hole} · ${h.board||'no board'}</div>${noteHTML}</div></div>`;
@@ -1662,6 +1682,91 @@ if (typeof BroadcastChannel !== 'undefined') {
   setInterval(() => { if (_isPrimary && !document.hidden) bc.postMessage('polling'); }, 10000);
   // If we don't hear from a primary within 12s, take over
   let _primaryTimeout = setTimeout(() => { _isPrimary = true; startPolling();
+renderCarryAnalysis();
+
+// ── CARRY ANALYSIS BY PLAYER COUNT ─────────────────────────────────────────
+let _carryHandCount = 0;
+function renderCarryAnalysis() {
+  const raw = state.raw;
+  if (!raw) return;
+  const snap = raw.all_players_snap || {};
+  const pc = Object.keys(snap).length || 0;
+  const carryAlert = raw.carry_alert || {};
+  const topCarry = carryAlert.topCarry || [];
+  const carryRate = raw.decision?.carryRate || state.narratives[0]?.weight_updates?.carry_rate || 0;
+
+  // Build player count bar data from model metadata
+  const model = raw.model_meta || {};
+  const totalHands = model.totalHands || 0;
+
+  // Recalculate every 30 hands
+  if (totalHands > 0 && totalHands % 30 !== 0 && _carryHandCount === totalHands) return;
+  _carryHandCount = totalHands;
+
+  // Carry rate bars — use current table size vs overall
+  const barsEl = document.getElementById('carry-by-pc-bars');
+  const topEl = document.getElementById('carry-top-cards');
+  const lblEl = document.getElementById('carry-table-label');
+  if (!barsEl) return;
+
+  // Show carry rate bars based on narrative data
+  // Only show real data from server — no fake multipliers
+  const pcRates = state._carryByPC || null;
+  if (!pcRates && carryRate <= 0) {
+    barsEl.innerHTML = '<div style="font-size:11px;color:var(--t3);font-family:var(--f-mono)">Play hands to build carry data…</div>';
+  } else if (!pcRates && carryRate > 0) {
+    // Only have overall rate — show as single bar until per-PC data arrives
+    const pct = Math.round(carryRate * 10) / 10;
+    barsEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px">
+      <div style="font-size:12px;color:var(--t2);width:76px;flex-shrink:0">Overall</div>
+      <div style="flex:1;height:8px;background:var(--border-md);border-radius:4px;overflow:hidden">
+        <div style="height:100%;border-radius:4px;background:#00d4a4;width:${Math.min(pct/20*100,100)}%;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:12px;font-weight:700;font-family:var(--f-mono);color:var(--t1);width:36px;text-align:right">${pct}%</div>
+    </div>`;
+  } else if (pcRates) {
+    const maxRate = Math.max(...Object.values(pcRates), 15);
+    const barColors = { '4-': '#00d4a4', '5-6': '#00d4a4', '7-8': '#e3b341', '9+': '#e3b341' };
+    const labels = { '4-': '4 or fewer', '5-6': '5–6 players', '7-8': '7–8 players', '9+': '9+ players' };
+    barsEl.innerHTML = Object.entries(pcRates).map(([bucket, rate]) => {
+      const pct = Math.round(rate * 10) / 10;
+      const barW = Math.round(pct / maxRate * 100);
+      return `<div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:12px;color:var(--t2);width:76px;flex-shrink:0">${labels[bucket]||bucket}</div>
+        <div style="flex:1;height:8px;background:var(--border-md);border-radius:4px;overflow:hidden">
+          <div style="height:100%;border-radius:4px;background:${barColors[bucket]||'#00d4a4'};width:${barW}%;transition:width 0.5s"></div>
+        </div>
+        <div style="font-size:12px;font-weight:700;font-family:var(--f-mono);color:var(--t1);width:36px;text-align:right">${pct}%</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Top carry cards with frequency
+  if (topCarry.length && topEl) {
+    const pcLabel = pc <= 4 ? '4-PLAYER' : pc <= 6 ? '5–6 PLAYER' : '7+ PLAYER';
+    if (lblEl) lblEl.textContent = `${pcLabel} TABLE — TOP CARRY CARDS`;
+    topEl.innerHTML = topCarry.slice(0,8).map(c => {
+      const card = c.card || c;
+      const pct = c.pct ? c.pct.toFixed(1)+'%' : '';
+      const suit = card.slice(-1);
+      const isRed = suit==='♥'||suit==='♦';
+      const freq = c.freq || 0;
+      const heat = freq >= 5 ? 'hot' : freq >= 3 ? 'warm' : 'cool';
+      const colors = {hot:'rgba(0,212,164,0.15)',warm:'rgba(227,179,65,0.12)',cool:'var(--bg-card)'};
+      const borders = {hot:'rgba(0,212,164,0.4)',warm:'rgba(227,179,65,0.3)',cool:'var(--border-md)'};
+      return `<div style="padding:3px 8px;border-radius:5px;font-family:var(--f-mono);font-size:12px;font-weight:700;background:${colors[heat]};border:1px solid ${borders[heat]};color:${isRed?'#FF3B3B':'var(--t1)'};display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span>${card}</span>${pct?`<span style="font-size:10px;color:var(--green)">${pct}</span>`:''}
+      </div>`;
+    }).join('');
+  }
+}
+
+// Hook into weight_updates to refresh carry analysis
+const _origRenderKnowledge2 = renderKnowledge;
+renderKnowledge = function() {
+  _origRenderKnowledge2();
+  renderCarryAnalysis();
+};
 loadActionWinRates();
 
 // ── LIVE ACTION WIN RATES from DB ─────────────────────────────────────────────
@@ -1710,6 +1815,18 @@ function updateActionWinProb(action) {
 }
 
 startPolling();
+renderCarryAnalysis();
+
+// ── CARRY ANALYSIS BY PLAYER COUNT ─────────────────────────────────────────
+let _carryHandCount = 0;
+
+
+// Hook into weight_updates to refresh carry analysis
+const _origRenderKnowledge2 = renderKnowledge;
+renderKnowledge = function() {
+  _origRenderKnowledge2();
+  renderCarryAnalysis();
+};
 loadActionWinRates();
 
 // ── LIVE ACTION WIN RATES from DB ─────────────────────────────────────────────
