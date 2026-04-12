@@ -511,6 +511,14 @@ def init_db():
             won              INTEGER DEFAULT 0,
             went_to_showdown INTEGER DEFAULT 0,
             saw_flop         INTEGER DEFAULT 0,
+            in_steal_position   INTEGER DEFAULT 0,
+            attempted_steal     INTEGER DEFAULT 0,
+            folded_to_steal     INTEGER DEFAULT 0,
+            faced_three_bet     INTEGER DEFAULT 0,
+            folded_to_three_bet INTEGER DEFAULT 0,
+            made_cbet           INTEGER DEFAULT 0,
+            faced_cbet          INTEGER DEFAULT 0,
+            folded_to_cbet      INTEGER DEFAULT 0,
             shown_cards      TEXT DEFAULT '[]',
             hand_message     TEXT DEFAULT '',
             dom_wins         INTEGER DEFAULT 0,
@@ -534,6 +542,16 @@ def init_db():
             saw_flop_count  INTEGER DEFAULT 0,
             allin_count     INTEGER DEFAULT 0,
             dom_win_count   INTEGER DEFAULT 0,
+            steal_opps      INTEGER DEFAULT 0,
+            steal_attempts  INTEGER DEFAULT 0,
+            fold_to_steal   INTEGER DEFAULT 0,
+            fold_to_steal_opps INTEGER DEFAULT 0,
+            faced_3bet      INTEGER DEFAULT 0,
+            folded_to_3bet  INTEGER DEFAULT 0,
+            cbet_opps       INTEGER DEFAULT 0,
+            cbet_count      INTEGER DEFAULT 0,
+            faced_cbet      INTEGER DEFAULT 0,
+            folded_to_cbet  INTEGER DEFAULT 0,
             commentary      TEXT    DEFAULT '',
             ts_updated      TEXT    DEFAULT (datetime('now')),
             UNIQUE(game_id, player_name)
@@ -541,13 +559,33 @@ def init_db():
         """)
     # Safe migrations for existing DBs
     migrations = [
-        ("hands",        "game_id",      "TEXT"),
-        ("mem0_log",     "game_id",      "TEXT"),
-        ("claude_log",   "game_id",      "TEXT"),
-        ("analysis_log", "game_id",      "TEXT"),
-        ("hands",        "shown_hands",  "TEXT DEFAULT '{}'"),
-        ("hands",        "player_stats", "TEXT DEFAULT '{}'"),
-        ("claude_log",   "next_hand",    "TEXT"),
+        ("hands",        "game_id",           "TEXT"),
+        ("mem0_log",     "game_id",           "TEXT"),
+        ("claude_log",   "game_id",           "TEXT"),
+        ("analysis_log", "game_id",           "TEXT"),
+        ("hands",        "shown_hands",       "TEXT DEFAULT '{}'"),
+        ("hands",        "player_stats",      "TEXT DEFAULT '{}'"),
+        ("claude_log",   "next_hand",         "TEXT"),
+        # New player_hands columns
+        ("player_hands", "in_steal_position",   "INTEGER DEFAULT 0"),
+        ("player_hands", "attempted_steal",      "INTEGER DEFAULT 0"),
+        ("player_hands", "folded_to_steal",      "INTEGER DEFAULT 0"),
+        ("player_hands", "faced_three_bet",      "INTEGER DEFAULT 0"),
+        ("player_hands", "folded_to_three_bet",  "INTEGER DEFAULT 0"),
+        ("player_hands", "made_cbet",            "INTEGER DEFAULT 0"),
+        ("player_hands", "faced_cbet",           "INTEGER DEFAULT 0"),
+        ("player_hands", "folded_to_cbet",       "INTEGER DEFAULT 0"),
+        # New player_stats columns
+        ("player_stats", "steal_opps",           "INTEGER DEFAULT 0"),
+        ("player_stats", "steal_attempts",       "INTEGER DEFAULT 0"),
+        ("player_stats", "fold_to_steal",        "INTEGER DEFAULT 0"),
+        ("player_stats", "fold_to_steal_opps",   "INTEGER DEFAULT 0"),
+        ("player_stats", "faced_3bet",           "INTEGER DEFAULT 0"),
+        ("player_stats", "folded_to_3bet",       "INTEGER DEFAULT 0"),
+        ("player_stats", "cbet_opps",            "INTEGER DEFAULT 0"),
+        ("player_stats", "cbet_count",           "INTEGER DEFAULT 0"),
+        ("player_stats", "faced_cbet",           "INTEGER DEFAULT 0"),
+        ("player_stats", "folded_to_cbet",       "INTEGER DEFAULT 0"),
     ]
     with get_db() as db:
         for table, col, typedef in migrations:
@@ -662,7 +700,16 @@ async def log_hand(data: HandData):
             )
             for p in data.players_in_hand:
                 db.execute(
-                    "INSERT INTO player_hands (game_id,hand_num,player_name,seat_pos,is_hero,stack_start,preflop_bet,flop_bet,turn_bet,river_bet,vpip,pfr,three_bet,four_bet_plus,aggressive_acts,passive_acts,folded,all_in,won,went_to_showdown,saw_flop,shown_cards,hand_message,dom_wins) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    """INSERT INTO player_hands
+                    (game_id,hand_num,player_name,seat_pos,is_hero,stack_start,
+                     preflop_bet,flop_bet,turn_bet,river_bet,
+                     vpip,pfr,three_bet,four_bet_plus,aggressive_acts,passive_acts,
+                     folded,all_in,won,went_to_showdown,saw_flop,
+                     in_steal_position,attempted_steal,folded_to_steal,
+                     faced_three_bet,folded_to_three_bet,
+                     made_cbet,faced_cbet,folded_to_cbet,
+                     shown_cards,hand_message,dom_wins)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (game_id, data.hand_num,
                      p.get("player_name",""), p.get("seat_pos",0), p.get("is_hero",0),
                      p.get("stack_start",0), p.get("preflop_bet",0), p.get("flop_bet",0),
@@ -671,11 +718,19 @@ async def log_hand(data: HandData):
                      p.get("four_bet_plus",0), p.get("aggressive_acts",0), p.get("passive_acts",0),
                      p.get("folded",0), p.get("all_in",0), p.get("won",0),
                      p.get("went_to_showdown",0), p.get("saw_flop",0),
+                     p.get("in_steal_position",0), p.get("attempted_steal",0), p.get("folded_to_steal",0),
+                     p.get("faced_three_bet",0), p.get("folded_to_three_bet",0),
+                     p.get("made_cbet",0), p.get("faced_cbet",0), p.get("folded_to_cbet",0),
                      p.get("shown_cards","[]"), p.get("hand_message",""), p.get("dom_wins",0))
                 )
                 db.execute(
-                    """INSERT INTO player_stats (game_id,player_name,hands_seen,vpip_count,pfr_count,threebet_count,fourbet_count,total_agg,total_passive,win_count,showdown_count,showdown_wins,saw_flop_count,allin_count,dom_win_count)
-                    VALUES(?,?,1,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """INSERT INTO player_stats
+                    (game_id,player_name,hands_seen,vpip_count,pfr_count,threebet_count,
+                     fourbet_count,total_agg,total_passive,win_count,showdown_count,
+                     showdown_wins,saw_flop_count,allin_count,dom_win_count,
+                     steal_opps,steal_attempts,fold_to_steal,fold_to_steal_opps,
+                     faced_3bet,folded_to_3bet,cbet_opps,cbet_count,faced_cbet,folded_to_cbet)
+                    VALUES(?,?,1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     ON CONFLICT(game_id,player_name) DO UPDATE SET
                         hands_seen=player_stats.hands_seen+1,
                         vpip_count=player_stats.vpip_count+excluded.vpip_count,
@@ -690,13 +745,28 @@ async def log_hand(data: HandData):
                         saw_flop_count=player_stats.saw_flop_count+excluded.saw_flop_count,
                         allin_count=player_stats.allin_count+excluded.allin_count,
                         dom_win_count=MAX(player_stats.dom_win_count,excluded.dom_win_count),
+                        steal_opps=player_stats.steal_opps+excluded.steal_opps,
+                        steal_attempts=player_stats.steal_attempts+excluded.steal_attempts,
+                        fold_to_steal=player_stats.fold_to_steal+excluded.fold_to_steal,
+                        fold_to_steal_opps=player_stats.fold_to_steal_opps+excluded.fold_to_steal_opps,
+                        faced_3bet=player_stats.faced_3bet+excluded.faced_3bet,
+                        folded_to_3bet=player_stats.folded_to_3bet+excluded.folded_to_3bet,
+                        cbet_opps=player_stats.cbet_opps+excluded.cbet_opps,
+                        cbet_count=player_stats.cbet_count+excluded.cbet_count,
+                        faced_cbet=player_stats.faced_cbet+excluded.faced_cbet,
+                        folded_to_cbet=player_stats.folded_to_cbet+excluded.folded_to_cbet,
                         ts_updated=datetime('now')""",
                     (game_id, p.get("player_name",""),
                      p.get("vpip",0), p.get("pfr",0), p.get("three_bet",0),
                      p.get("four_bet_plus",0), p.get("aggressive_acts",0), p.get("passive_acts",0),
                      p.get("won",0), p.get("went_to_showdown",0),
                      1 if (p.get("won",0) and p.get("went_to_showdown",0)) else 0,
-                     p.get("saw_flop",0), p.get("all_in",0), p.get("dom_wins",0))
+                     p.get("saw_flop",0), p.get("all_in",0), p.get("dom_wins",0),
+                     p.get("in_steal_position",0), p.get("attempted_steal",0),
+                     p.get("folded_to_steal",0), p.get("folded_to_steal",0),
+                     p.get("faced_three_bet",0), p.get("folded_to_three_bet",0),
+                     p.get("in_steal_position",0) if p.get("pfr",0) else 0,  # cbet_opps = was PFR
+                     p.get("made_cbet",0), p.get("faced_cbet",0), p.get("folded_to_cbet",0))
                 )
 
         result = "WON" if data.hero_won else ("FOLDED" if data.hero_folded else "LOST")
@@ -1220,20 +1290,30 @@ async def get_player_stats(game_id: str):
                 (game_id,)
             ).fetchall()
         def compute(s):
-            h  = s["hands_seen"]    or 1
-            fl = s["saw_flop_count"] or 1
-            sd = s["showdown_count"] or 1
-            pa = s["total_passive"]  or 1
+            h   = s["hands_seen"]     or 1
+            fl  = s["saw_flop_count"] or 1
+            sd  = s["showdown_count"] or 1
+            pa  = s["total_passive"]  or 1
+            st  = s["steal_opps"]     or 1
+            f3  = s["faced_3bet"]     or 1
+            cb  = s["cbet_opps"]      or 1
+            fcs = s["fold_to_steal_opps"] or 1
+            fcb = s["faced_cbet"]     or 1
             return {
                 **dict(s),
-                "vpip_pct":     round(s["vpip_count"]     / h  * 100, 1),
-                "pfr_pct":      round(s["pfr_count"]      / h  * 100, 1),
-                "threebet_pct": round(s["threebet_count"] / h  * 100, 1),
-                "af":           round(s["total_agg"]      / pa,       2),
-                "wtsd_pct":     round(s["showdown_count"] / fl * 100, 1),
-                "wsd_pct":      round(s["showdown_wins"]  / sd * 100, 1),
-                "win_pct":      round(s["win_count"]      / h  * 100, 1),
-                "allin_pct":    round(s["allin_count"]    / h  * 100, 1),
+                "vpip_pct":       round(s["vpip_count"]      / h   * 100, 1),
+                "pfr_pct":        round(s["pfr_count"]       / h   * 100, 1),
+                "threebet_pct":   round(s["threebet_count"]  / h   * 100, 1),
+                "af":             round(s["total_agg"]       / pa,        2),
+                "wtsd_pct":       round(s["showdown_count"]  / fl  * 100, 1),
+                "wsd_pct":        round(s["showdown_wins"]   / sd  * 100, 1),
+                "win_pct":        round(s["win_count"]       / h   * 100, 1),
+                "allin_pct":      round(s["allin_count"]     / h   * 100, 1),
+                "ats_pct":        round(s["steal_attempts"]  / st  * 100, 1),
+                "fold_to_3b_pct": round(s["folded_to_3bet"]  / f3  * 100, 1),
+                "cbet_pct":       round(s["cbet_count"]      / cb  * 100, 1),
+                "fold_to_cbet_pct": round(s["folded_to_cbet"] / fcb * 100, 1),
+                "fold_to_steal_pct": round(s["fold_to_steal"] / fcs * 100, 1),
             }
         return {"ok": True, "players": [compute(r) for r in rows]}
     except Exception as e:

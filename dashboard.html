@@ -1359,19 +1359,19 @@ function openPlayerModal(playerName) {
   // Pre-flop
   const pfEl = document.getElementById('modal-preflop');
   pfEl.innerHTML = [
-    { val: (s.threeBet||0)+'%', lbl: '3Bet%' },
-    { val: '—',                  lbl: 'Fold to 3B' },
-    { val: '—',                  lbl: 'ATS%' },
-    { val: (s.allinCount && s.handsTracked ? Math.round(s.allinCount/s.handsTracked*100) : 0)+'%', lbl: 'All-in%' },
+    { val: (s.threeBet||0)+'%',      lbl: '3Bet%' },
+    { val: (s.ats_pct||s.ats||0)+'%', lbl: 'ATS%' },
+    { val: (s.fold_to_3b_pct||0)+'%', lbl: 'Fold to 3B' },
+    { val: (s.allinCount && s.handsTracked ? Math.round(s.allinCount/s.handsTracked*100) : s.allin_pct||0)+'%', lbl: 'All-in%' },
   ].map(x => `<div class="modal-stat-box"><div class="modal-stat-val">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
 
   // Post-flop
   const postEl = document.getElementById('modal-postflop');
   postEl.innerHTML = [
-    { val: (s.wtsd||0)+'%', lbl: 'WTSD%' },
-    { val: (s.wsd||0)+'%',  lbl: 'W$SD%' },
-    { val: '—',              lbl: 'CBet%' },
-    { val: (s.showdownCount||0)+'/'+(s.handsTracked||0), lbl: 'SD/Hands' },
+    { val: (s.wtsd||s.wtsd_pct||0)+'%',       lbl: 'WTSD%' },
+    { val: (s.wsd||s.wsd_pct||0)+'%',         lbl: 'W$SD%' },
+    { val: (s.cbet_pct||0)+'%',               lbl: 'CBet%' },
+    { val: (s.fold_to_cbet_pct||0)+'%',       lbl: 'Fold to CB' },
   ].map(x => `<div class="modal-stat-box"><div class="modal-stat-val">${x.val}</div><div class="modal-stat-lbl">${x.lbl}</div></div>`).join('');
 
   // Reset narrative
@@ -1471,55 +1471,87 @@ function renderKnowledge() {
   const el = document.getElementById('knowledge-list');
   if (!el) return;
 
-  const wu = state.lastWeightUpdate;
-  const mem0Count = state.mem0List?.length || 0;
-  const narrativeCount = state.narratives.length;
+  const wu         = state.lastWeightUpdate || {};
+  const patch      = state.raw?.model_patch || {};
+  const narratives = state.narratives || [];
+  const players    = state.playerStats || {};
+  const dangerList = Object.entries(players).filter(([,s]) => s.isDanger).map(([n]) => n);
+  const feederList = Object.entries(players).filter(([,s]) => s.isFeeder).map(([n]) => n);
 
   let html = '';
 
-  // Current model patch state
-  const patch = state.raw?.model_patch || {};
-  html += `<div style="margin-bottom:10px">
-    <div class="panel-label" style="margin-bottom:6px">Active Model Patch</div>
-    <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-2)">
-      <div>carryBoost: <span style="color:${(patch.carryBoost||0)>0?'var(--warning)':'var(--text-3)'}">${patch.carryBoost||0}</span></div>
-      <div>dangerWarning: <span style="color:${patch.jeezyWarning?'var(--danger)':'var(--text-3)'}">${patch.jeezyWarning||false}</span></div>
-      <div>allinWarning: <span style="color:${patch.allinWarning?'var(--danger)':'var(--text-3)'}">${patch.allinWarning||false}</span></div>
-      <div>hotCards: <span style="color:var(--accent)">${(patch.hotCards||[]).join(' ')||'—'}</span></div>
-    </div>
-  </div>`;
-
-  // Memory system status
-  html += `<div style="margin-bottom:10px">
-    <div class="panel-label" style="margin-bottom:6px">Memory System</div>
-    <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-2)">
-      <div>Mem0 memories stored: <span style="color:var(--accent)">${mem0Count}</span></div>
-      <div>Narratives generated: <span style="color:var(--accent)">${narrativeCount}</span></div>
-      <div>Letta status: <span style="color:var(--warning)">Claude fallback (Letta pending)</span></div>
-    </div>
-  </div>`;
-
-  // Last weight update details
-  if (wu) {
-    html += `<div style="margin-bottom:10px">
-      <div class="panel-label" style="margin-bottom:6px">Last Between-Hands Update</div>
-      <div style="font-size:11px;color:var(--warning);line-height:1.5;margin-bottom:6px">${wu.next_hand||'—'}</div>
-      <div style="font-family:var(--f-mono);font-size:10px;color:var(--text-3)">
-        Hand #${wu.hand_num||'?'} · WR: ${wu.live_wr||'—'}% · Carry: ${wu.carry_rate||'—'}%
-        ${wu.danger_players?.length ? `<br>Danger players: ${wu.danger_players.join(', ')}` : ''}
+  // ── Active model patch ────────────────────────────────────────────────────
+  html += `<div class="modal-section">
+    <div class="modal-section-title">Active Model Patch</div>
+    <div style="font-family:var(--f-mono);font-size:10px">
+      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-3)">carryBoost</span>
+        <span style="color:${(patch.carryBoost||0)>0?'var(--warning)':'var(--text-3)'}">${patch.carryBoost||0}</span>
       </div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-3)">dangerWarning</span>
+        <span style="color:${patch.jeezyWarning?'var(--danger)':'var(--text-3)'}">${patch.jeezyWarning||false}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-3)">allinWarning</span>
+        <span style="color:${patch.allinWarning?'var(--danger)':'var(--text-3)'}">${patch.allinWarning||false}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0">
+        <span style="color:var(--text-3)">hotCards</span>
+        <span style="color:var(--accent)">${(patch.hotCards||[]).join(' ')||'—'}</span>
+      </div>
+    </div>
+  </div>`;
+
+  // ── What Letta knows ──────────────────────────────────────────────────────
+  html += `<div class="modal-section">
+    <div class="modal-section-title">What Letta Knows</div>
+    <div style="font-family:var(--f-mono);font-size:10px">
+      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-3)">Letta status</span>
+        <span style="color:var(--warning)">Claude fallback</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-3)">Narratives generated</span>
+        <span style="color:var(--accent)">${narratives.length}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-3)">Live win rate</span>
+        <span style="color:var(--accent)">${wu.live_wr||'—'}%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-3)">Carry rate</span>
+        <span style="color:${(wu.carry_rate||0)>35?'var(--warning)':'var(--text-2)'}">${wu.carry_rate||'—'}%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-3)">Danger players</span>
+        <span style="color:var(--danger)">${dangerList.join(', ')||'none'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0">
+        <span style="color:var(--text-3)">Feeder players</span>
+        <span style="color:var(--info)">${feederList.join(', ')||'none'}</span>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Last narrative ────────────────────────────────────────────────────────
+  if (wu.next_hand) {
+    html += `<div class="modal-section">
+      <div class="modal-section-title">Last Letta Note</div>
+      <div style="font-size:11px;color:var(--warning);line-height:1.6;padding:8px;background:rgba(255,176,32,0.05);border:1px solid rgba(255,176,32,0.15);border-radius:5px">${wu.next_hand}</div>
+      <div style="font-size:9px;color:var(--text-3);margin-top:4px;font-family:var(--f-mono)">Hand #${wu.hand_num||'?'}</div>
     </div>`;
   }
 
-  // How the loop works
-  html += `<div>
-    <div class="panel-label" style="margin-bottom:6px">Learning Loop</div>
-    <div style="font-size:10px;color:var(--text-3);line-height:1.6">
-      DOM → Extension → /raw → Dashboard<br>
-      Hand ends → /hand → Mem0 store<br>
-      Mem0 retrieval → Claude analysis<br>
-      weight_updates → model.js patch<br>
-      → Next hand decisions updated
+  // ── Learning loop diagram ─────────────────────────────────────────────────
+  html += `<div class="modal-section">
+    <div class="modal-section-title">Learning Loop</div>
+    <div style="font-size:10px;color:var(--text-3);line-height:2;font-family:var(--f-mono)">
+      <div><span style="color:var(--accent)">DOM</span> → Extension → /raw → Dashboard</div>
+      <div><span style="color:var(--accent)">Hand ends</span> → /hand → Mem0 store</div>
+      <div><span style="color:var(--accent)">LangGraph</span> → Mem0 retrieve → Letta</div>
+      <div><span style="color:var(--accent)">weight_updates</span> → model.js patch</div>
+      <div><span style="color:var(--accent)">Next hand</span> decisions updated ✓</div>
     </div>
   </div>`;
 
