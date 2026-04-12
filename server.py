@@ -1,12 +1,12 @@
 """
-Poker Agent Server — Railway deployment
-Mem0 Cloud + Claude API + persistent analysis history
+Poker Agent Server v32 — Railway deployment
+FastAPI + SQLite + LangGraph + Letta Cloud + Mem0 + Claude
 """
 
 import sqlite3, json, os, asyncio
 from datetime import datetime
 from collections import Counter, defaultdict
-from typing import Optional, Dict, Set
+from typing import Optional, Dict, Set, Any
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -15,6 +15,13 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import anthropic
 from mem0 import MemoryClient
+
+# ── LangGraph ─────────────────────────────────────────────────────────────────
+from langgraph.graph import StateGraph, END
+from typing import TypedDict
+
+# ── Letta Cloud ───────────────────────────────────────────────────────────────
+from letta_client import Letta
 
 app = FastAPI()
 app.add_middleware(
@@ -26,8 +33,56 @@ app.add_middleware(
 
 MEM0_API_KEY  = os.environ.get("MEM0_API_KEY", "")
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-USER_ID       = "poker_player"
+LETTA_API_KEY = os.environ.get("LETTA_API_KEY", "")
 DB_PATH       = "hands.db"
+# USER_ID is now the game_id — each game has its own isolated Mem0 namespace.
+# No global USER_ID. Pass game_id wherever Mem0 is called.
+
+# ── Letta client ──────────────────────────────────────────────────────────────
+def get_letta():
+    return Letta(token=LETTA_API_KEY)
+
+# Cache of game_id → letta agent_id so we don't recreate on every hand
+_letta_agents: Dict[str, str] = {}
+
+def get_or_create_letta_agent(game_id: str) -> str:
+    """Get existing Letta agent for this game or create a new one."""
+    if game_id in _letta_agents:
+        return _letta_agents[game_id]
+    try:
+        client = get_letta()
+        # Check if agent already exists with this name
+        agents = client.agents.list()
+        existing = next((a for a in agents if a.name == f"poker_{game_id}"), None)
+        if existing:
+            _letta_agents[game_id] = existing.id
+            return existing.id
+        # Create new agent for this game
+        agent = client.agents.create(
+            name=f"poker_{game_id}",
+            model="claude-sonnet-4-5",
+            embedding="openai/text-embedding-ada-002",
+            memory_blocks=[
+                {"label": "game_context", "value": f"Poker game ID: {game_id}. This agent tracks patterns, danger players, carry rates, and player tendencies for this specific game."},
+                {"label": "player_notes", "value": "No players tracked yet."},
+                {"label": "carry_patterns", "value": "No carry patterns detected yet."},
+            ],
+            system="""You are a persistent poker analysis agent for a PokerNow game.
+You track patterns across every hand played in this game.
+After each hand you update your memory with new observations.
+You return structured JSON with weight_updates that affect the betting algorithm:
+- carryBoost: float 0.0-2.0 — raise if carry pattern strong
+- jeezyWarning: bool — true if a danger player (60%+ win rate) is active
+- allinWarning: bool — true if all-in pattern detected
+- hotCards: list of card strings that are running hot
+Always base analysis on actual data. Never invent stats."""
+        )
+        _letta_agents[game_id] = agent.id
+        print(f"[letta] Created agent for game {game_id}: {agent.id}")
+        return agent.id
+    except Exception as e:
+        print(f"[letta] Error getting/creating agent: {e}")
+        return ""
 
 # ── WebSocket connection manager ──────────────────────────────────────────────
 class ConnectionManager:
@@ -60,6 +115,276 @@ manager = ConnectionManager()
 
 # Latest raw state per session (for reconnect)
 _latest_state: Dict[str, dict] = {}
+
+# ── LangGraph — Between-Hands Workflow ───────────────────────────────────────
+# Replaces the manual _run_between_hands prompt engineering.
+# Each node is a pure function. Edges are conditional on what was detected.
+
+class HandAnalysisState(TypedDict):
+    # Input
+    game_id:      str
+    session_id:   str
+    hand_num:     int
+    hole_cards:   list
+    board:        list
+    hero_won:     bool
+    hero_folded:  bool
+    all_in:       bool
+    away_mode:    bool
+    pot:          int
+    shown_hands:  dict
+    player_stats: dict
+    # Computed through graph
+    live_stats:   dict
+    memories:     list
+    letta_response: str
+    weight_updates: dict
+    next_hand:    str
+    danger_players: list
+    # Control flow
+    has_danger:   bool
+    has_carry:    bool
+    is_allin:     bool
+
+def node_load_context(state: HandAnalysisState) -> dict:
+    """Node 1: Load live stats from DB."""
+    try:
+        with get_db() as db:
+            total   = db.execute("SELECT COUNT(*) FROM hands WHERE game_id=?", (state["game_id"],)).fetchone()[0]
+            won     = db.execute("SELECT COUNT(*) FROM hands WHERE game_id=? AND hero_won=1", (state["game_id"],)).fetchone()[0]
+            allin_t = db.execute("SELECT COUNT(*) FROM hands WHERE game_id=? AND all_in=1", (state["game_id"],)).fetchone()[0]
+            allin_w = db.execute("SELECT COUNT(*) FROM hands WHERE game_id=? AND all_in=1 AND hero_won=1", (state["game_id"],)).fetchone()[0]
+            recent  = db.execute("SELECT hole_cards, board, hero_won, all_in FROM hands WHERE game_id=? ORDER BY id DESC LIMIT 10", (state["game_id"],)).fetchall()
+
+        live_wr  = round(won/total*100, 1)      if total  > 0 else 0
+        allin_wr = round(allin_w/allin_t*100,1) if allin_t > 0 else 0
+
+        # Carry rate from last 50 hands
+        recent50 = []
+        with get_db() as db:
+            recent50 = [dict(r) for r in db.execute("SELECT hole_cards, board FROM hands WHERE game_id=? ORDER BY id DESC LIMIT 50", (state["game_id"],)).fetchall()]
+        carry_pairs = sum(
+            1 for i in range(1, len(recent50))
+            if set(json.loads(recent50[i-1].get("board","[]")||"[]")) &
+               set(json.loads(recent50[i].get("hole_cards","[]")||"[]") + json.loads(recent50[i].get("board","[]")||"[]"))
+        )
+        carry_rate = round(carry_pairs / max(len(recent50)-1, 1) * 100, 1)
+
+        # Danger players from player_stats
+        danger = [p for p,s in state["player_stats"].items()
+                  if s.get("showdowns",0) >= 3 and s.get("winRate",0) >= 60]
+
+        return {
+            "live_stats": {
+                "total_hands": total, "win_rate": live_wr,
+                "allin_wr": allin_wr, "carry_rate": carry_rate,
+                "recent": [dict(r) for r in recent],
+            },
+            "danger_players": danger,
+            "has_danger": len(danger) > 0,
+            "has_carry":  carry_rate > 35,
+            "is_allin":   state["all_in"],
+        }
+    except Exception as e:
+        print(f"[graph:load_context] {e}")
+        return {"live_stats": {}, "danger_players": [], "has_danger": False, "has_carry": False, "is_allin": False}
+
+def node_mem0_retrieve(state: HandAnalysisState) -> dict:
+    """Node 2: Retrieve relevant memories from Mem0 for this game."""
+    try:
+        mem0  = get_mem0()
+        query = f"{' '.join(state['hole_cards'])} {' '.join(state['board'])}"
+        results = mem0.search(query=query, filters={"user_id": state["game_id"]}, limit=8)
+        memories = [m.get("memory","") for m in (results if isinstance(results, list) else [])]
+        return {"memories": memories}
+    except Exception as e:
+        print(f"[graph:mem0_retrieve] {e}")
+        return {"memories": []}
+
+def node_letta_reason(state: HandAnalysisState) -> dict:
+    """Node 3: Send hand to Letta agent — it reasons with its persistent memory."""
+    try:
+        agent_id = get_or_create_letta_agent(state["game_id"])
+        if not agent_id:
+            raise ValueError("No Letta agent available")
+
+        client = get_letta()
+        ls     = state["live_stats"]
+        result_str = "WON" if state["hero_won"] else ("FOLDED" if state["hero_folded"] else "LOST")
+        shown  = ", ".join(f"{p}: {' '.join(c)}" for p,c in state["shown_hands"].items()) if state["shown_hands"] else "none"
+
+        message = f"""Hand #{state['hand_num']} just completed.
+
+RESULT: {result_str} | Pot: {state['pot']} | All-in: {state['all_in']}
+Hero held: {' '.join(state['hole_cards']) if state['hole_cards'] else 'away'}
+Board: {' '.join(state['board']) if state['board'] else 'no board'}
+Opponents showed: {shown}
+
+LIVE STATS (actual DB values):
+- Hands: {ls.get('total_hands',0)} | Win rate: {ls.get('win_rate',0)}%
+- All-in win rate: {ls.get('allin_wr',0)}% | Carry rate: {ls.get('carry_rate',0)}%
+- Danger players detected: {state['danger_players'] or 'none'}
+
+MEM0 MEMORIES (similar past hands):
+{chr(10).join(f'- {m}' for m in state['memories']) if state['memories'] else '- none yet'}
+
+Update your memory with new observations from this hand.
+Then respond in JSON only:
+{{
+  "nextHand": "1-2 sentence forward-looking instruction for next hand",
+  "weight_updates": {{
+    "carryBoost": 0.0,
+    "jeezyWarning": false,
+    "allinWarning": false,
+    "hotCards": []
+  }}
+}}"""
+
+        response = client.agents.messages.create(
+            agent_id=agent_id,
+            messages=[{"role": "user", "content": message}]
+        )
+        # Extract text from Letta response
+        letta_text = ""
+        for msg in response.messages:
+            if hasattr(msg, 'text') and msg.text:
+                letta_text = msg.text
+                break
+            if hasattr(msg, 'content') and msg.content:
+                letta_text = msg.content
+                break
+
+        return {"letta_response": letta_text}
+    except Exception as e:
+        print(f"[graph:letta_reason] {e}")
+        return {"letta_response": ""}
+
+def node_parse_updates(state: HandAnalysisState) -> dict:
+    """Node 4: Parse Letta response into weight_updates + nextHand."""
+    try:
+        raw = state["letta_response"].strip().replace('```json','').replace('```','').strip()
+        # Find JSON block
+        start = raw.find('{')
+        end   = raw.rfind('}') + 1
+        if start >= 0 and end > start:
+            parsed = json.loads(raw[start:end])
+        else:
+            parsed = {}
+        return {
+            "next_hand":      parsed.get("nextHand", ""),
+            "weight_updates": parsed.get("weight_updates", {
+                "carryBoost": 0.0, "jeezyWarning": False,
+                "allinWarning": False, "hotCards": []
+            })
+        }
+    except Exception as e:
+        print(f"[graph:parse_updates] {e}")
+        return {
+            "next_hand": "",
+            "weight_updates": {"carryBoost": 0.0, "jeezyWarning": False, "allinWarning": False, "hotCards": []}
+        }
+
+def node_apply_danger(state: HandAnalysisState) -> dict:
+    """Node 5a: Danger player detected — force jeezyWarning on."""
+    wu = dict(state.get("weight_updates", {}))
+    wu["jeezyWarning"] = True
+    return {"weight_updates": wu}
+
+def node_apply_carry(state: HandAnalysisState) -> dict:
+    """Node 5b: Strong carry pattern — boost carry signal."""
+    wu = dict(state.get("weight_updates", {}))
+    ls = state.get("live_stats", {})
+    carry = ls.get("carry_rate", 0)
+    wu["carryBoost"] = max(wu.get("carryBoost", 0), round(carry / 50, 2))
+    return {"weight_updates": wu}
+
+def node_apply_allin(state: HandAnalysisState) -> dict:
+    """Node 5c: All-in this hand — flag allinWarning."""
+    wu = dict(state.get("weight_updates", {}))
+    wu["allinWarning"] = True
+    return {"weight_updates": wu}
+
+def node_store_memory(state: HandAnalysisState) -> dict:
+    """Node 6: Store analysis back to Mem0 and DB."""
+    try:
+        next_hand = state.get("next_hand","")
+        if next_hand:
+            mem0 = get_mem0()
+            mem0.add(
+                f"Hand #{state['hand_num']} analysis: {next_hand}",
+                user_id=state["game_id"],
+                metadata={"type":"between_hands","hand_num":state["hand_num"]}
+            )
+        with get_db() as db:
+            db.execute(
+                "INSERT INTO claude_log (game_id,session_id,hand_num,prompt,response,next_hand) VALUES(?,?,?,?,?,?)",
+                (state["game_id"], state["session_id"], state["hand_num"],
+                 f"LangGraph+Letta hand #{state['hand_num']}", state.get("letta_response","")[:500], next_hand)
+            )
+    except Exception as e:
+        print(f"[graph:store_memory] {e}")
+    return {}
+
+# ── Build the LangGraph ───────────────────────────────────────────────────────
+def build_poker_graph():
+    graph = StateGraph(HandAnalysisState)
+
+    # Add nodes
+    graph.add_node("load_context",   node_load_context)
+    graph.add_node("mem0_retrieve",  node_mem0_retrieve)
+    graph.add_node("letta_reason",   node_letta_reason)
+    graph.add_node("parse_updates",  node_parse_updates)
+    graph.add_node("apply_danger",   node_apply_danger)
+    graph.add_node("apply_carry",    node_apply_carry)
+    graph.add_node("apply_allin",    node_apply_allin)
+    graph.add_node("store_memory",   node_store_memory)
+
+    # Linear flow: load → mem0 → letta → parse
+    graph.set_entry_point("load_context")
+    graph.add_edge("load_context",  "mem0_retrieve")
+    graph.add_edge("mem0_retrieve", "letta_reason")
+    graph.add_edge("letta_reason",  "parse_updates")
+
+    # Conditional edges after parse — apply modifiers based on what was detected
+    def route_after_parse(state):
+        if state.get("has_danger"):   return "apply_danger"
+        if state.get("has_carry"):    return "apply_carry"
+        if state.get("is_allin"):     return "apply_allin"
+        return "store_memory"
+
+    graph.add_conditional_edges("parse_updates", route_after_parse, {
+        "apply_danger":  "apply_danger",
+        "apply_carry":   "apply_carry",
+        "apply_allin":   "apply_allin",
+        "store_memory":  "store_memory",
+    })
+
+    # After each modifier, check if more apply
+    def route_after_danger(state):
+        if state.get("has_carry"):  return "apply_carry"
+        if state.get("is_allin"):   return "apply_allin"
+        return "store_memory"
+
+    def route_after_carry(state):
+        if state.get("is_allin"): return "apply_allin"
+        return "store_memory"
+
+    graph.add_conditional_edges("apply_danger", route_after_danger, {
+        "apply_carry":  "apply_carry",
+        "apply_allin":  "apply_allin",
+        "store_memory": "store_memory",
+    })
+    graph.add_conditional_edges("apply_carry", route_after_carry, {
+        "apply_allin":  "apply_allin",
+        "store_memory": "store_memory",
+    })
+    graph.add_edge("apply_allin",   "store_memory")
+    graph.add_edge("store_memory",  END)
+
+    return graph.compile()
+
+# Compile once at startup
+poker_graph = build_poker_graph()
 
 # ── DB ────────────────────────────────────────────────────────────────────────
 def get_db():
@@ -344,7 +669,7 @@ async def log_hand(data: HandData):
             memory_text += f", opponents showed: {', '.join(f'{p}: {chr(32).join(c)}' for p,c in data.shown_hands.items())}"
 
         mem0 = get_mem0()
-        result_mem = mem0.add(memory_text, user_id=USER_ID,
+        result_mem = mem0.add(memory_text, user_id=game_id,
                               metadata={"hand_num": data.hand_num, "game_id": game_id, "hero_won": data.hero_won})
         mem0_id = result_mem.get("id") if isinstance(result_mem, dict) else None
         with get_db() as db:
@@ -366,13 +691,17 @@ async def log_hand(data: HandData):
 
 # ── GET /analyze — full analysis, stores result historically ──────────────────
 @app.get("/analyze")
-async def analyze():
+async def analyze(game_id: str = ""):
     try:
         mem0   = get_mem0()
         client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
-        # Pull all Mem0 memories
-        all_mems = mem0.get_all(filters={"user_id": USER_ID})
+        # Use game_id as Mem0 user namespace — fall back to listing all if not provided
+        mem_user = game_id if game_id else None
+        if mem_user:
+            all_mems = mem0.get_all(filters={"user_id": mem_user})
+        else:
+            all_mems = mem0.get_all(filters={"user_id": "poker_player"})  # legacy fallback
         memories = []
         if isinstance(all_mems, list):
             for m in all_mems:
@@ -448,7 +777,7 @@ Reference specific hands from memory where possible. Do not assume anything not 
         # Also push the analysis itself into Mem0 so /advice can reference it
         mem0.add(
             f"ANALYSIS at {datetime.utcnow().isoformat()}: {narrative[:500]}",
-            user_id=USER_ID,
+            user_id=game_id if game_id else "poker_player",
             metadata={"type": "analysis", "hands": stats.get("total",0)}
         )
 
@@ -480,10 +809,11 @@ async def analysis_history():
 
 # ── GET /memories ─────────────────────────────────────────────────────────────
 @app.get("/memories")
-async def all_memories():
+async def all_memories(game_id: str = ""):
     try:
         mem0 = get_mem0()
-        all_mems = mem0.get_all(filters={"user_id": USER_ID})
+        mem_user = game_id if game_id else "poker_player"
+        all_mems = mem0.get_all(filters={"user_id": mem_user})
         memories = []
         if isinstance(all_mems, list):
             for m in all_mems:
@@ -527,7 +857,7 @@ async def health():
     mem0_live = False; mem0_error = ""
     try:
         m = get_mem0()
-        m.search(query="test", filters={"user_id": USER_ID}, limit=1)
+        m.search(query="test", filters={"user_id": "health_check"}, limit=1)
         mem0_live = True
     except Exception as e:
         mem0_error = str(e)[:100]
@@ -560,170 +890,59 @@ async def health():
 # ── Core Claude analysis function (called by queue) ──────────────────────────
 async def _run_between_hands(data_dict: dict):
     """
-    Between-hands analysis using Letta (persistent agent) + Mem0 (retrieval).
-
-    Architecture:
-    - Mem0 = retrieval layer: stores every hand, searched for similar past hands
-    - Letta = reasoning layer: persistent agent with core memory, uses Mem0, calls Claude internally
-    - Claude = LLM inside Letta (not called directly here when Letta is available)
-    - Returns weight_updates that get pushed to dashboard via WebSocket and patched onto model.js
-
-    weight_updates flow:
-    Letta response → weight_updates → WebSocket broadcast → dashboard applies to model
-    → affects next hand's getAdvice() decisions (carryBoost, hotCards, allinWarning, dangerActive)
+    Between-hands analysis via LangGraph + Letta + Mem0.
+    Graph: load_context → mem0_retrieve → letta_reason → parse_updates
+           → [apply_danger] → [apply_carry] → [apply_allin] → store_memory → END
     """
     try:
-        session_id  = data_dict.get("session_id","")
-        hand_num    = data_dict.get("hand_num", 0)
-        hole_cards  = data_dict.get("hole_cards", [])
-        flop        = data_dict.get("flop", [])
-        turn        = data_dict.get("turn", [])
-        river       = data_dict.get("river", [])
-        hero_won    = data_dict.get("hero_won", False)
-        hero_folded = data_dict.get("hero_folded", False)
-        all_in      = data_dict.get("all_in", False)
-        away_mode   = data_dict.get("away_mode", False)
-        pot         = data_dict.get("pot", 0)
-        shown_hands = data_dict.get("shown_hands", {})
-        player_stats= data_dict.get("player_stats", {})
+        game_id    = data_dict.get("game_id", data_dict.get("session_id",""))
+        session_id = data_dict.get("session_id","")
+        board      = data_dict.get("flop",[]) + data_dict.get("turn",[]) + data_dict.get("river",[])
 
-        board = flop + turn + river
-        mem0  = get_mem0()
-
-        # ── Step 1: Mem0 retrieval — find similar past hands ──────────────────
-        query = f"{' '.join(hole_cards)} {' '.join(board)}"
-        mem_results = mem0.search(query=query, filters={"user_id": USER_ID}, limit=8)
-        memories = [m.get("memory","") for m in (mem_results if isinstance(mem_results, list) else [])]
-
-        # ── Step 2: Pull live stats from DB — no hardcoded numbers ────────────
-        with get_db() as db:
-            last_analysis  = db.execute(
-                "SELECT claude_narrative, hands_at_time FROM analysis_log ORDER BY ts DESC LIMIT 1"
-            ).fetchone()
-            recent_hands   = db.execute(
-                "SELECT hole_cards, board, hero_won, all_in FROM hands ORDER BY id DESC LIMIT 10"
-            ).fetchall()
-            total_hands    = db.execute("SELECT COUNT(*) FROM hands").fetchone()[0]
-            hero_won_count = db.execute("SELECT COUNT(*) FROM hands WHERE hero_won=1").fetchone()[0]
-            allin_count    = db.execute("SELECT COUNT(*) FROM hands WHERE all_in=1").fetchone()[0]
-            allin_won      = db.execute("SELECT COUNT(*) FROM hands WHERE all_in=1 AND hero_won=1").fetchone()[0]
-            # Carry rate from recent hands
-            recent_all     = db.execute(
-                "SELECT hole_cards, board FROM hands ORDER BY id DESC LIMIT 50"
-            ).fetchall()
-
-        live_wr      = round(hero_won_count/total_hands*100, 1) if total_hands > 0 else 0
-        allin_wr     = round(allin_won/allin_count*100, 1)      if allin_count  > 0 else 0
-        analysis_ctx = last_analysis["claude_narrative"][:300]   if last_analysis else ""
-        recent       = [dict(r) for r in recent_hands]
-
-        # Compute carry rate from last 50 hands
-        carry_pairs = 0
-        recent_list = [dict(r) for r in recent_all]
-        for i in range(1, len(recent_list)):
-            prev_board = json.loads(recent_list[i-1].get("board","[]") or "[]")
-            curr_hole  = json.loads(recent_list[i].get("hole_cards","[]") or "[]")
-            curr_board = json.loads(recent_list[i].get("board","[]") or "[]")
-            if set(prev_board) & set(curr_hole + curr_board):
-                carry_pairs += 1
-        carry_rate = round(carry_pairs / max(len(recent_list)-1, 1) * 100, 1)
-
-        # Danger players from live player_stats
-        danger_players = [p for p,s in player_stats.items()
-                         if s.get("showdowns",0) >= 3 and s.get("winRate",0) >= 60]
-
-        result_str = "WON" if hero_won else ("FOLDED" if hero_folded else "LOST")
-        mode_str   = " [HERO AWAY]" if away_mode else ""
-        shown_str  = ", ".join(f"{p}: {' '.join(c)}" for p,c in shown_hands.items()) if shown_hands else "none"
-
-        # ── Step 3: Build prompt for Letta/Claude ─────────────────────────────
-        # Letta (when integrated) will use this as its reasoning input.
-        # Letta maintains core memory (danger players, carry patterns, session state)
-        # and queries Mem0 automatically. Until Letta is deployed, Claude gets this directly.
-        prompt = f"""You are a persistent poker analysis agent with memory of this entire session.
-
-COMPLETED HAND #{hand_num}{mode_str}:
-- Hero held: {' '.join(hole_cards) if hole_cards else 'N/A (away)'}
-- Board: {' '.join(board) if board else 'no board'}
-- Result: {result_str} | Pot: {pot} | All-in: {all_in}
-- Opponents showed: {shown_str}
-
-LIVE SESSION STATS (actual database values — not assumptions):
-- Total hands: {total_hands} | Win rate: {live_wr}% | All-in win rate: {allin_wr}%
-- Carry rate (last 50 hands): {carry_rate}%
-- Danger players (60%+ win rate, 3+ showdowns): {danger_players if danger_players else 'none detected yet'}
-
-MEM0 MEMORIES — similar past hands retrieved:
-{chr(10).join(f'- {m}' for m in memories) if memories else '- none yet'}
-
-RECENT TREND (last 5 hands):
-{chr(10).join(f"  hole:{r['hole_cards']} board:{r['board']} won:{r['hero_won']}" for r in recent[:5])}
-
-LAST ANALYSIS: {analysis_ctx}
-
-Based ONLY on actual data above, respond in JSON:
-{{
-  "nextHand": "1-2 sentence forward-looking instruction for NEXT hand. Specific. Based on real patterns only.",
-  "weight_updates": {{
-    "carryBoost": 0.0,
-    "jeezyWarning": false,
-    "allinWarning": false,
-    "hotCards": []
-  }}
-}}
-
-weight_updates rules:
-- carryBoost: float 0.0-2.0, raise if carry rate > 40% or strong carry pattern detected
-- jeezyWarning: true if any danger player (60%+ win rate) is likely in next hand
-- allinWarning: true if all-in rate > 15% or pattern suggests all-in likely
-- hotCards: list of card strings ["A♠","K♥"] that appeared frequently in winning hands from memories"""
-
-        # ── Step 4: Call Claude (Letta will replace this call when deployed) ──
-        client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-        resp   = client.messages.create(
-            model="claude-sonnet-4-5",
-            max_tokens=400,
-            messages=[{"role":"user","content":prompt}]
-        )
-        raw    = resp.content[0].text.strip().replace('```json','').replace('```','').strip()
-        parsed = json.loads(raw)
-        next_hand_text  = parsed.get("nextHand","")
-        weight_updates  = parsed.get("weight_updates", {})
-
-        # ── Step 5: Store observation back to Mem0 ────────────────────────────
-        mem0.add(
-            f"Hand #{hand_num} analysis: {next_hand_text}",
-            user_id=USER_ID,
-            metadata={"type":"between_hands","hand_num":hand_num,"session":session_id}
+        result = await asyncio.to_thread(
+            poker_graph.invoke,
+            {
+                "game_id":      game_id,
+                "session_id":   session_id,
+                "hand_num":     data_dict.get("hand_num", 0),
+                "hole_cards":   data_dict.get("hole_cards", []),
+                "board":        board,
+                "hero_won":     data_dict.get("hero_won", False),
+                "hero_folded":  data_dict.get("hero_folded", False),
+                "all_in":       data_dict.get("all_in", False),
+                "away_mode":    data_dict.get("away_mode", False),
+                "pot":          data_dict.get("pot", 0),
+                "shown_hands":  data_dict.get("shown_hands", {}),
+                "player_stats": data_dict.get("player_stats", {}),
+                "live_stats": {}, "memories": [],
+                "letta_response": "", "weight_updates": {},
+                "next_hand": "", "danger_players": [],
+                "has_danger": False, "has_carry": False, "is_allin": False,
+            }
         )
 
-        # ── Step 6: Store to claude_log ───────────────────────────────────────
-        with get_db() as db:
-            db.execute(
-                "INSERT INTO claude_log (session_id,hand_num,prompt,response,next_hand) VALUES(?,?,?,?,?)",
-                (session_id, hand_num, prompt[:500], raw, next_hand_text)
-            )
+        next_hand      = result.get("next_hand", "")
+        weight_updates = result.get("weight_updates", {})
+        live_stats     = result.get("live_stats", {})
+        danger_players = result.get("danger_players", [])
 
-        # ── Step 7: Push weight_updates + narrative to dashboard via WebSocket ─
-        # Dashboard receives this, applies weight_updates to local model,
-        # which affects next hand's getAdvice() decisions
         await manager.broadcast(session_id, {
             "type": "weight_updates",
             "data": {
-                "hand_num":       hand_num,
-                "next_hand":      next_hand_text,
+                "hand_num":       data_dict.get("hand_num", 0),
+                "next_hand":      next_hand,
                 "weight_updates": weight_updates,
-                "carry_rate":     carry_rate,
-                "live_wr":        live_wr,
+                "carry_rate":     live_stats.get("carry_rate", 0),
+                "live_wr":        live_stats.get("win_rate", 0),
                 "danger_players": danger_players,
             }
         })
-
-        return parsed
+        return {"nextHand": next_hand, "weight_updates": weight_updates}
 
     except Exception as e:
-        print(f"[_run_between_hands] error: {e}")
+        print(f"[_run_between_hands] LangGraph error: {e}")
         return {}
+
 
 # ── POST /between_hands — now just enqueues ───────────────────────────────────
 class BetweenHandsData(BaseModel):
@@ -871,7 +1090,11 @@ async def get_state(session_id: str):
             "narratives":   [dict(r) for r in narratives],
             "hand_history": hand_history,
             "player_stats": latest.get("player_stats", {}),
-            "server_status": {"hands_logged": hc, "mem0_live": True, "claude_live": True},
+            "server_status": {
+                "hands_logged": hc,
+                "mem0_live":    bool(MEM0_API_KEY),
+                "claude_live":  bool(ANTHROPIC_KEY),
+            },
         }
     except Exception as e:
         return {"ok": False, "error": str(e)}
@@ -888,7 +1111,7 @@ async def dashboard():
 from fastapi import Request as FastAPIRequest
 
 @app.post("/upload_csv")
-async def upload_csv(request: FastAPIRequest):
+async def upload_csv(request: FastAPIRequest, game_id: str = "csv_upload"):
     import re
     try:
         text  = (await request.body()).decode("utf-8")
@@ -928,7 +1151,7 @@ async def upload_csv(request: FastAPIRequest):
         try:
             get_mem0().add(
                 f"CSV upload: {len(hands)} historical hands loaded",
-                user_id=USER_ID,
+                user_id=game_id,
                 metadata={"type": "csv_upload", "count": len(hands)}
             )
         except Exception:
@@ -1019,7 +1242,7 @@ async def player_narrative(data: NarrativeRequest):
             hands_summary.append(f"#{r['hand_num']}: {result}, preflop={r['preflop_bet']}, flop={r['flop_bet']}, {r.get('hand_message','')}")
 
         mem0 = get_mem0()
-        mem_results = mem0.search(query=f"player {data.player_name}", filters={"user_id": USER_ID}, limit=5)
+        mem_results = mem0.search(query=f"player {data.player_name}", filters={"user_id": data.game_id}, limit=5)
         memories = [m.get("memory","") for m in (mem_results if isinstance(mem_results, list) else [])]
 
         prompt = f"""Write a professional 4-5 line poker HUD commentary on this player.
