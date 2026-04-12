@@ -59,7 +59,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .tab-content.active{display:flex;flex-direction:column}
 
 /* LIVE TAB */
-#main-grid{display:grid;grid-template-columns:200px 1fr 260px;gap:1px;background:var(--border);flex:1;min-height:0;overflow:hidden}
+#main-grid{display:grid;grid-template-columns:215px 1fr 255px;gap:1px;background:var(--border);flex:1;min-height:0;overflow:hidden}
 .panel{background:var(--bg-panel);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border-md) transparent}
 
 /* DECISION PANEL */
@@ -107,7 +107,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 #flush-banner{padding:5px 10px;border-radius:5px;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(88,166,255,0.25);margin-bottom:6px;display:none}
 #flush-banner.active{display:block}
 #table-dynamic-wrap{padding:5px 12px;border-bottom:1px solid var(--border);color:var(--t2);display:none}
-#waiting-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;gap:8px}
+#waiting-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;gap:8px;flex:1}
 .ws-icon{font-size:28px;opacity:0.15}.ws-label{font-size:20px;font-weight:700;letter-spacing:3px;color:var(--t4)}.ws-sub{color:var(--t4);text-align:center}
 
 /* SECTION LABEL */
@@ -118,9 +118,9 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 
 /* CARDS */
 #center-panel{display:flex;flex-direction:column}
-.cards-section{padding:10px 12px;border-bottom:1px solid var(--border)}
+.cards-section{padding:8px 12px 10px;border-bottom:1px solid var(--border)}
 .cards-row{display:flex;align-items:center;gap:7px;margin-bottom:7px}.cards-row:last-child{margin-bottom:0}
-.cards-row-label{font-weight:700;letter-spacing:2px;color:var(--t2);width:42px;flex-shrink:0;text-transform:uppercase}
+.cards-row-label{font-weight:700;letter-spacing:1.5px;color:var(--t2);width:46px;flex-shrink:0;text-transform:uppercase;font-size:11px}
 .card{width:38px;height:52px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--f-mono);gap:1px;position:relative;transition:transform 0.2s}
 .card:hover{transform:translateY(-2px)}
 .card .rank{font-size:14px;font-weight:600;line-height:1}.card .suit{line-height:1}
@@ -176,7 +176,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .p-tag.feeder{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(88,166,255,0.2)}
 .hud-big4{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:5px}
 .hud-stat{text-align:center}
-.hud-val{font-family:var(--f-mono);font-size:16px;font-weight:700;color:var(--t1);line-height:1.1}
+.hud-val{font-family:var(--f-mono);font-size:15px;font-weight:700;color:var(--t1);line-height:1.1}
 .hud-val.danger{color:#ff9b9b}.hud-val.warn{color:var(--warning)}.hud-val.good{color:var(--green)}
 .hud-lbl{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase}
 .winrate-bar{height:2px;background:var(--border);border-radius:1px;margin:3px 0;overflow:hidden}
@@ -212,7 +212,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .modal-ask-btn:hover{background:rgba(188,140,255,0.2)}
 
 /* BOTTOM STRIP */
-#bottom-strip{display:grid;grid-template-columns:1fr 1fr 1fr 165px;gap:1px;background:var(--border);min-height:155px;max-height:155px;flex-shrink:0;border-top:1px solid var(--border-md)}
+#bottom-strip{display:grid;grid-template-columns:1fr 1fr 1fr 185px;gap:1px;background:var(--border);min-height:170px;max-height:170px;flex-shrink:0;border-top:1px solid var(--border-md)}
 .b-panel{background:var(--bg-panel);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 .b-panel:last-child{border-right:none}
 .b-panel-content{flex:1;overflow-y:auto;padding:6px 12px}
@@ -220,13 +220,13 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .narrative-entry:last-child{border-bottom:none}
 .narrative-meta{font-family:var(--f-mono);color:var(--green);margin-bottom:3px;display:flex;gap:5px;flex-wrap:wrap}
 .narrative-text{color:var(--t1);line-height:1.4}
-.know-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--border);font-size:13px;animation:fadeSlideUp 0.2s ease forwards}
+.know-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid var(--border);font-size:12px;animation:fadeSlideUp 0.2s ease forwards}
 .know-row:last-child{border-bottom:none}
 .know-k{font-family:var(--f-mono);font-size:13px;color:var(--t1);letter-spacing:0.3px}
 .know-v{font-family:var(--f-mono);font-size:14px;color:var(--t1);font-weight:700}
 .know-v.gold{color:var(--warning)}.know-v.danger{color:#ff9b9b}.know-v.green{color:var(--green)}
-#tools-panel{background:var(--bg-panel);padding:7px 9px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
-#upload-zone{border:1px dashed var(--border-md);border-radius:5px;padding:6px 8px;text-align:center;cursor:pointer;transition:all 0.2s;flex-shrink:0}
+#tools-panel{background:var(--bg-panel);padding:6px 8px;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+#upload-zone{border:1px dashed var(--border-md);border-radius:5px;padding:4px 6px;text-align:center;cursor:pointer;transition:all 0.2s;flex-shrink:0}
 #upload-zone:hover{border-color:rgba(0,212,164,0.4);background:rgba(0,212,164,0.05)}
 .uz-icon{display:block;margin-bottom:2px}
 .uz-text{color:var(--t1);font-weight:600}
@@ -366,12 +366,12 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
   <div class="tab-content active" id="tab-live">
     <div id="main-grid">
 
-      <div class="panel" id="decision-panel">
+      <div class="panel" id="decision-panel" style="display:flex;flex-direction:column;">
         <div id="your-turn-banner"><span class="turn-pulse"></span>YOUR TURN TO ACT</div>
         <div id="tilt-banner">🔴 TILT ALERT — 3+ losses in a row — engine tightened</div>
         <div id="action-display">
-          <span id="action-emoji">🃏</span>
-          <div id="action-text" class="action-wait">WAITING</div>
+          <span id="action-emoji"></span>
+          <div id="action-text" class="action-wait"></div>
           <div id="action-sizing"></div>
           <div id="action-win-prob" style="font-family:var(--f-mono);font-size:11px;color:var(--t3);margin-top:3px;min-height:14px;letter-spacing:0.5px"></div>
           <div id="hand-strength"></div>
@@ -384,6 +384,19 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
             <span class="eq-val" id="equity-est">—%</span>
           </div>
         </div>
+        <div id="reasons-list"></div>
+        <div id="stage-bar">
+          <div class="stage-pill" id="sp-preflop">PRE</div>
+          <div class="stage-pill" id="sp-flop">FLOP</div>
+          <div class="stage-pill" id="sp-turn">TURN</div>
+          <div class="stage-pill" id="sp-river">RIVER</div>
+        </div>
+        <div id="stats-bar">
+          <div class="stat-chip"><span id="ms-hands">0</span> hands</div>
+          <div class="stat-chip"><span id="ms-carry">0</span>% carry</div>
+          <div class="stat-chip">btn: <span id="ms-dealer">—</span></div>
+          <div class="stat-chip"><span id="ms-blinds">—/—</span></div>
+        </div>
         <div id="bet-context-box">
           <div class="bc-row"><span class="bc-label">AGGRESSOR</span><span class="bc-val" id="bc-aggressor">—</span></div>
           <div class="bc-row"><span class="bc-label">THEIR BET</span><span class="bc-val" id="bc-their-bet">—</span></div>
@@ -393,26 +406,13 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
           <div class="bc-row"><span class="bc-label">EQUITY NEEDED</span><span class="bc-val highlight" id="bc-equity">—</span></div>
           <div id="equity-bar-wrap"><div id="pot-odds-fill"></div></div>
         </div>
-        <div id="reasons-list"><div class="empty-state" style="padding:10px"><div class="empty-text">Reasons appear when model is ready</div></div></div>
-        <div id="stage-bar">
-          <div class="stage-pill" id="sp-preflop">PRE</div>
-          <div class="stage-pill" id="sp-flop">FLOP</div>
-          <div class="stage-pill" id="sp-turn">TURN</div>
-          <div class="stage-pill" id="sp-river">RIVER</div>
-        </div>
-        <div id="table-dynamic-bar" style="padding:5px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--t2);display:none" id="table-dynamic-wrap">
+        <div id="table-dynamic-bar" id="table-dynamic-wrap" style="padding:5px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--t2);display:none">
           <span id="table-dynamic"></span>
-        </div>
-        <div id="stats-bar">
-          <div class="stat-chip"><span id="ms-hands">0</span> hands</div>
-          <div class="stat-chip"><span id="ms-carry">0</span>% carry</div>
-          <div class="stat-chip">btn: <span id="ms-dealer">—</span></div>
-          <div class="stat-chip"><span id="ms-blinds">—/—</span></div>
         </div>
         <div id="waiting-state">
           <div class="ws-icon">🃏</div>
           <div class="ws-label">WAITING</div>
-          <div class="ws-sub">Waiting for cards…</div>
+          <div class="ws-sub">Play a hand to begin</div>
         </div>
       </div>
 
@@ -595,12 +595,12 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
       <div class="b-panel-content"><div id="mem0-list"><div class="empty-state" style="padding:8px"><div class="empty-text">Memories stored as hands are played</div></div></div></div>
     </div>
     <div class="b-panel">
-      <div class="sec-label" style="padding:8px 12px 6px">Knowledge Loop</div>
-      <div class="b-panel-content"><div id="knowledge-list"><div class="empty-state" style="padding:8px"><div class="empty-text">Waiting for first hand…</div></div></div></div>
+      <div class="sec-label" style="padding:6px 10px 4px">Knowledge Loop</div>
+      <div class="b-panel-content" style="padding:4px 10px"><div id="knowledge-list"><div class="empty-state" style="padding:8px"><div class="empty-text">Waiting for first hand…</div></div></div></div>
     </div>
     <div id="tools-panel">
       <div class="sec-label" style="padding:0 0 6px;border-bottom:1px solid var(--border)">TOOLS</div>
-      <div id="upload-zone" onclick="document.getElementById('upload-input').click()" style="margin-top:5px">
+      <div id="upload-zone" onclick="document.getElementById('upload-input').click()">
         <span class="uz-icon">📂</span>
         <div class="uz-text">Upload PokerNow CSV</div>
         <div class="uz-sub">Seeds model + Mem0</div>
@@ -752,7 +752,7 @@ function connectWS() {
         // Show seeded status in upload area
         const us = document.getElementById('upload-status');
         if (us) {
-          us.textContent = `✓ ${totalH} total hands (${gameH} this game) — model ready`;
+          us.textContent = `✓ ${totalH} hands loaded`;
           us.style.color = 'var(--green)';
         }
         renderKnowledge();
