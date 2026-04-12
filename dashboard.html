@@ -21,7 +21,7 @@
   --f-mono:'SF Mono','Fira Code','Consolas',monospace;
   --f-body:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
-html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font-family:var(--f-body);display:flex;flex-direction:column}
+html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font-family:var(--f-body);font-size:13px;line-height:1.4;display:flex;flex-direction:column}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 @keyframes snapIn{0%{transform:scale(0.92) translateY(4px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
 @keyframes fadeSlideUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
@@ -59,7 +59,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .tab-content.active{display:flex;flex-direction:column}
 
 /* LIVE TAB */
-#main-grid{display:grid;grid-template-columns:minmax(180px,200px) 1fr minmax(200px,220px);gap:1px;background:var(--border);flex:1;min-height:0;overflow:hidden}
+#main-grid{display:grid;grid-template-columns:200px 1fr 260px;gap:1px;background:var(--border);flex:1;min-height:0;overflow:hidden}
 .panel{background:var(--bg-panel);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border-md) transparent}
 
 /* DECISION PANEL */
@@ -99,7 +99,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .reason-item::before{content:'▸';color:var(--green);flex-shrink:0;font-size:13px;margin-top:2px}
 .reason-item.danger{color:#ff9b9b}.reason-item.danger::before{color:var(--red)}
 #stage-bar{padding:6px 12px;display:flex;gap:3px;border-bottom:1px solid var(--border)}
-.stage-pill{padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--t4);background:var(--bg-card);border:1px solid var(--border);transition:all 0.2s}
+.stage-pill{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t4);background:var(--bg-card);border:1px solid var(--border);transition:all 0.2s}
 .stage-pill.active{background:rgba(0,212,164,0.1);border-color:rgba(0,212,164,0.3);color:var(--green)}
 #stats-bar{padding:5px 12px;display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
 .stat-chip{padding:2px 7px;border-radius:4px;font-family:var(--f-mono);font-size:13px;color:var(--t3);background:var(--bg-card);border:1px solid var(--border)}
@@ -163,7 +163,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 /* PLAYER HUB */
 #player-panel{display:flex;flex-direction:column}
 #player-list{padding:6px 8px;display:flex;flex-direction:column;gap:6px}
-.player-card{border-radius:7px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);position:relative;overflow:hidden;transition:border-color 0.2s,transform 0.15s;cursor:default}
+.player-card{border-radius:7px;padding:9px 12px;background:var(--bg-card);border:1px solid var(--border);position:relative;overflow:hidden;transition:border-color 0.2s,transform 0.15s;cursor:default}
 .player-card:hover{transform:translateX(2px);border-color:var(--border-hi);background:var(--bg-hover)}
 .player-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
 .player-card.danger{border-color:rgba(255,85,85,0.3)}.player-card.danger::before{background:var(--red)}
@@ -178,13 +178,13 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .hud-stat{text-align:center}
 .hud-val{font-family:var(--f-mono);font-size:16px;font-weight:700;color:var(--t1);line-height:1.1}
 .hud-val.danger{color:#ff9b9b}.hud-val.warn{color:var(--warning)}.hud-val.good{color:var(--green)}
-.hud-lbl{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase}
+.hud-lbl{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase}
 .winrate-bar{height:2px;background:var(--border);border-radius:1px;margin:3px 0;overflow:hidden}
 .winrate-fill{height:100%;border-radius:1px;transition:width 0.5s}
 .hud-preflop{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding-top:4px;border-top:1px solid var(--border)}
 .hud-pf-stat{text-align:center}
 .hud-pf-val{font-family:var(--f-mono);color:var(--t2)}
-.hud-pf-lbl{font-size:10px;color:var(--t3);letter-spacing:0.5px;text-transform:uppercase}
+.hud-pf-lbl{font-size:11px;color:var(--t3);letter-spacing:0.5px;text-transform:uppercase}
 .p-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
 .p-sample{font-size:13px;color:var(--t4);font-family:var(--f-mono)}
 .claude-btn{font-size:12px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:20px;background:var(--purple-dim);color:var(--purple);border:1px solid rgba(188,140,255,0.28);cursor:pointer;transition:all 0.2s}
@@ -193,7 +193,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 /* PLAYER MODAL */
 #player-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 #player-modal.open{display:flex}
-#player-modal-inner{background:#161b22;border:1px solid var(--border-hi);border-radius:10px;width:560px;max-height:80vh;overflow-y:auto;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}
+#player-modal-inner{background:#161b22;border:1px solid var(--border-hi);border-radius:10px;width:min(560px,90vw);max-height:80vh;overflow-y:auto;padding:22px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}
 #modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
 #modal-player-name{font-size:22px;font-weight:700;color:var(--t1)}
 #modal-close{width:30px;height:30px;border-radius:5px;background:var(--bg-card);border:1px solid var(--border);color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all 0.2s}
@@ -212,7 +212,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .modal-ask-btn:hover{background:rgba(188,140,255,0.2)}
 
 /* BOTTOM STRIP */
-#bottom-strip{display:grid;grid-template-columns:1fr 1fr 1fr 155px;gap:1px;background:var(--border);min-height:155px;max-height:155px;flex-shrink:0;border-top:1px solid var(--border-md)}
+#bottom-strip{display:grid;grid-template-columns:1fr 1fr 1fr 165px;gap:1px;background:var(--border);min-height:155px;max-height:155px;flex-shrink:0;border-top:1px solid var(--border-md)}
 .b-panel{background:var(--bg-panel);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 .b-panel:last-child{border-right:none}
 .b-panel-content{flex:1;overflow-y:auto;padding:6px 12px}
@@ -400,7 +400,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
           <div class="stage-pill" id="sp-turn">TURN</div>
           <div class="stage-pill" id="sp-river">RIVER</div>
         </div>
-        <div id="table-dynamic-bar" style="padding:5px 12px;border-bottom:1px solid var(--border);font-size:10px;color:var(--t2);display:none" id="table-dynamic-wrap">
+        <div id="table-dynamic-bar" style="padding:5px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--t2);display:none" id="table-dynamic-wrap">
           <span id="table-dynamic"></span>
         </div>
         <div id="stats-bar">
@@ -426,7 +426,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
           <div class="cards-row" style="margin-top:7px">
             <div class="cards-row-label">BOARD</div>
             <div id="board-cards" style="display:flex;gap:5px;align-items:center">
-              <span style="font-family:var(--f-mono);font-size:10px;letter-spacing:1px;color:var(--t4)">PREFLOP</span>
+              <span style="font-family:var(--f-mono);font-size:12px;letter-spacing:1px;color:var(--t4)">PREFLOP</span>
             </div>
           </div>
         </div>
@@ -435,7 +435,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
           <div class="carry-header">⚡ CARRY ALERT</div>
           <div id="carry-cards"></div>
           <div id="carry-flush-warnings" style="margin-top:5px"></div>
-          <div id="carry-hit-summary" style="font-size:10px;color:var(--t3);margin-top:3px;font-family:var(--f-mono)"></div>
+          <div id="carry-hit-summary" style="font-size:12px;color:var(--t3);margin-top:3px;font-family:var(--f-mono)"></div>
         </div>
         <div id="predicted-section">
           <div id="predicted-label" class="sec-label" style="padding:0;border:none;margin-bottom:6px">Predicted Cards</div>
@@ -460,19 +460,19 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
     <div class="s-inner">
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:0">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase">Session Target</span>
+          <span style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase">Session Target</span>
           <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:9px;color:var(--t3);font-family:var(--f-mono)">Goal:</span>
+            <span style="font-size:11px;color:var(--t3);font-family:var(--f-mono)">Goal:</span>
             <input type="number" id="session-target" value="500" style="width:60px;background:var(--bg);border:1px solid var(--border-md);border-radius:4px;padding:2px 6px;font-family:var(--f-mono);font-size:11px;color:var(--t1);text-align:right" oninput="updateSessionTarget()">
-            <span style="font-size:9px;color:var(--t3);font-family:var(--f-mono)">chips</span>
+            <span style="font-size:11px;color:var(--t3);font-family:var(--f-mono)">chips</span>
           </div>
         </div>
         <div style="height:6px;background:var(--border-md);border-radius:3px;overflow:hidden;margin-bottom:4px">
           <div id="target-fill" style="height:100%;border-radius:3px;background:var(--green);width:0%;transition:width 0.5s,background 0.3s"></div>
         </div>
         <div style="display:flex;justify-content:space-between">
-          <span style="font-size:10px;color:var(--t2);font-family:var(--f-mono)" id="target-label">0 / 500 chips</span>
-          <span style="font-size:10px;font-weight:700;font-family:var(--f-mono)" id="target-pct">0%</span>
+          <span style="font-size:12px;color:var(--t2);font-family:var(--f-mono)" id="target-label">0 / 500 chips</span>
+          <span style="font-size:12px;font-weight:700;font-family:var(--f-mono)" id="target-pct">0%</span>
         </div>
       </div>
       <div class="stat-row">
@@ -488,7 +488,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
       </div>
       <div class="stack-graph">
         <div class="timeline-lbl">Stack over session</div>
-        <div class="sg-bars" id="stack-graph-bars"><div class="empty-state" style="padding:4px;width:100%"><div class="empty-text" style="font-size:9px">No data yet</div></div></div>
+        <div class="sg-bars" id="stack-graph-bars"><div class="empty-state" style="padding:4px;width:100%"><div class="empty-text" style="font-size:11px">No data yet</div></div></div>
       </div>
     </div>
   </div>
@@ -911,8 +911,8 @@ function renderCards(d) {
   const holeRanks = holeCards.map(c => c.slice(0,-1));
   const holeEl = document.getElementById('hole-cards');
   const boardEl = document.getElementById('board-cards');
-  holeEl.innerHTML = holeCards.length ? holeCards.map(c => cardHTML(c, 'hero', false)).join('') : '<span style="color:var(--t4);font-family:var(--f-mono);font-size:10px">No cards</span>';
-  boardEl.innerHTML = boardCards.length ? boardCards.map(c => cardHTML(c, 'board', false)).join('') : '<span style="color:var(--t4);font-family:var(--f-mono);font-size:10px">PREFLOP</span>';
+  holeEl.innerHTML = holeCards.length ? holeCards.map(c => cardHTML(c, 'hero', false)).join('') : '<span style="color:var(--t4);font-family:var(--f-mono);font-size:12px">No cards</span>';
+  boardEl.innerHTML = boardCards.length ? boardCards.map(c => cardHTML(c, 'board', false)).join('') : '<span style="color:var(--t4);font-family:var(--f-mono);font-size:12px">PREFLOP</span>';
 }
 
 // ── PREDICTED ──────────────────────────────────────────────────────────────────
@@ -949,7 +949,7 @@ function renderCarryAlert(d) {
   }).join('');
   document.getElementById('carry-flush-warnings').innerHTML = (alert.flushSuitAlert || []).map(f => {
     const hits = f.cards.filter(c => boardSet.has(c)).length;
-    return `<div style="font-size:10px;color:var(--blue);margin-top:3px">⚠️ ${f.count} ${f.suit} cards from last hand — flush risk${hits ? ` <b style="color:var(--danger)">(${hits} on board!)</b>` : ''}</div>`;
+    return `<div style="font-size:12px;color:var(--blue);margin-top:3px">⚠️ ${f.count} ${f.suit} cards from last hand — flush risk${hits ? ` <b style="color:var(--danger)">(${hits} on board!)</b>` : ''}</div>`;
   }).join('');
   const hitSummary = alert.topCarry.filter(x => boardSet.has(x.card));
   document.getElementById('carry-hit-summary').innerHTML = hitSummary.length ? `🎯 ${hitSummary.map(x=>x.card).join(' ')} carried onto board!` : '';
@@ -998,7 +998,7 @@ function renderPlayerHub(d) {
         <div class="hud-pf-stat"><div class="hud-pf-val">${s.threeBet||0}%</div><div class="hud-pf-lbl">3Bet</div></div>
         <div class="hud-pf-stat"><div class="hud-pf-val">${s.wtsd||0}%</div><div class="hud-pf-lbl">WTSD</div></div>
         <div class="hud-pf-stat"><div class="hud-pf-val">${s.wsd||0}%</div><div class="hud-pf-lbl">W$SD</div></div>
-      </div>` : `<div style="font-size:10px;color:var(--t3);font-family:var(--f-mono);padding:3px 0">${stackLine || 'New player'}</div>`}
+      </div>` : `<div style="font-size:12px;color:var(--t3);font-family:var(--f-mono);padding:3px 0">${stackLine || 'New player'}</div>`}
       <div class="p-bottom">
         <span class="p-sample">${s.handsTracked||0}h ${stackLine&&hasStats?stackLine:''}</span>
       </div>
@@ -1033,7 +1033,7 @@ function renderNarratives() {
     if (wu.dangerWarning) tags.push('⚠ DANGER');
     if (wu.allinWarning) tags.push('🚨 ALL-IN');
     if (wu.hotCards?.length) tags.push(`🔥 ${wu.hotCards.join(' ')}`);
-    const statsLine = (n.live_wr||n.carry_rate) ? `<div style="font-size:10px;color:var(--t3);margin-top:2px">WR: ${n.live_wr||'—'}% · Carry: ${n.carry_rate||'—'}%</div>` : '';
+    const statsLine = (n.live_wr||n.carry_rate) ? `<div style="font-size:12px;color:var(--t3);margin-top:2px">WR: ${n.live_wr||'—'}% · Carry: ${n.carry_rate||'—'}%</div>` : '';
     return `<div class="narrative-entry"><div class="narrative-meta">Hand #${n.hand_num||'?'} · ${n.ts||''} ${tags.join(' ')}</div><div class="narrative-text">${n.next_hand||n.text||''}</div>${statsLine}</div>`;
   }).join('');
 }
@@ -1056,7 +1056,7 @@ function renderKnowledge() {
     ['narratives', state.narratives.length+'', 'green'],
   ];
   let html = rows.map(([k,v,cls])=>`<div class="know-row"><span class="know-k">${k}</span><span class="know-v ${cls}">${v}</span></div>`).join('');
-  if (wu.next_hand) html += `<div style="margin-top:6px;padding:7px 8px;border-radius:4px;background:rgba(227,179,65,0.08);border:1px solid rgba(227,179,65,0.15);font-size:10px;color:var(--warning);line-height:1.5">${wu.next_hand}</div>`;
+  if (wu.next_hand) html += `<div style="margin-top:6px;padding:7px 8px;border-radius:4px;background:rgba(227,179,65,0.08);border:1px solid rgba(227,179,65,0.15);font-size:12px;color:var(--warning);line-height:1.5">${wu.next_hand}</div>`;
   el.innerHTML = html || '<div class="empty-state" style="padding:8px"><div class="empty-text">Waiting for first hand…</div></div>';
 }
 
@@ -1511,7 +1511,7 @@ function renderPreflopRangeChart() {
   const posRanges = { BTN:0.40, CO:0.32, HJ:0.24, EP:0.15, SB:0.28, BB:0.35, unknown:0.25 };
   const playRange = posRanges[pos] || 0.25;
   // Build 13x13 grid — top-left = AA, diagonal = pocket pairs, above = suited, below = offsuit
-  let html = `<div style="margin-bottom:6px;font-size:9px;color:var(--t2);font-family:var(--f-mono)">Position: <span style="color:var(--green);font-weight:700">${pos}</span> · Playing top <span style="color:var(--warning)">${Math.round(playRange*100)}%</span> of hands</div>`;
+  let html = `<div style="margin-bottom:6px;font-size:11px;color:var(--t2);font-family:var(--f-mono)">Position: <span style="color:var(--green);font-weight:700">${pos}</span> · Playing top <span style="color:var(--warning)">${Math.round(playRange*100)}%</span> of hands</div>`;
   html += '<div style="display:grid;grid-template-columns:repeat(13,1fr);gap:1px">';
   for (let i = 0; i < 13; i++) {
     for (let j = 0; j < 13; j++) {
@@ -1531,7 +1531,7 @@ function renderPreflopRangeChart() {
     }
   }
   html += '</div>';
-  html += '<div style="display:flex;gap:10px;margin-top:6px;font-size:9px;color:var(--t3)">';
+  html += '<div style="display:flex;gap:10px;margin-top:6px;font-size:11px;color:var(--t3)">';
   html += '<span style="color:var(--green)">■</span> Play &nbsp; <span style="color:var(--warning)">■</span> Situational &nbsp; <span style="color:rgba(0,212,164,0.8)">■</span> Carry hot';
   html += '</div>';
   el.innerHTML = html;
