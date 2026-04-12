@@ -199,7 +199,7 @@ html, body {
 
 /* ── SECTION LABEL ────────────────────────────────────────────────────────────── */
 .sec-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -352,10 +352,15 @@ html, body {
   font-family:var(--f-mono); gap:1px; position:relative; transition:transform 0.2s;
 }
 .card:hover { transform:translateY(-2px); }
-.card .rank { font-size:16px; font-weight:500; line-height:1; }
-.card .suit { font-size:11px; line-height:1; }
-.card.red   { color:#ff9090; border-color:rgba(255,123,123,0.4); background:rgba(255,85,85,0.06); }
-.card.black { color:#ffffff; }
+.card .rank { font-size:16px; font-weight:600; line-height:1; }
+.card .suit { font-size:14px; line-height:1; }
+.card.hearts  { color:#FF3B3B; border-color:rgba(255,59,59,0.4); background:rgba(255,59,59,0.06); }
+.card.diamonds{ color:#FF3B3B; border-color:rgba(255,59,59,0.4); background:rgba(255,59,59,0.06); }
+.card.spades  { color:#E6EDF3; border-color:rgba(230,237,243,0.3); }
+.card.clubs   { color:#C8D6E0; border-color:rgba(200,214,224,0.3); }
+/* keep .red and .black for backwards compat */
+.card.red   { color:#FF3B3B; border-color:rgba(255,59,59,0.4); background:rgba(255,59,59,0.06); }
+.card.black { color:#E6EDF3; }
 .card.hero  { border-color:rgba(0,212,164,0.5); box-shadow:0 0 12px rgba(0,212,164,0.15); }
 .card.connecting { border-color:rgba(88,166,255,0.5); box-shadow:0 0 8px rgba(88,166,255,0.15); }
 .connect-star { position:absolute; top:2px; right:3px; font-size:7px; color:var(--blue); }
@@ -460,13 +465,13 @@ html, body {
 
 .narrative-entry { padding:7px 0; border-bottom:1px solid var(--border); animation:fadeSlideUp 0.3s ease forwards; }
 .narrative-entry:last-child { border-bottom:none; }
-.narrative-meta { font-family:var(--f-mono); font-size:11px; color:var(--green); margin-bottom:3px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.narrative-text { font-size:11px; color:var(--t2); line-height:1.4; }
+.narrative-meta { font-family:var(--f-mono); font-size:12px; color:var(--green); margin-bottom:3px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.narrative-text { font-size:12px; color:var(--t2); line-height:1.4; }
 
 .know-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border); font-size:11px; animation:fadeSlideUp 0.2s ease forwards; }
 .know-row:last-child { border-bottom:none; }
-.know-k { font-family:var(--f-mono); font-size:11px; color:var(--t2); }
-.know-v { font-family:var(--f-mono); font-size:11px; color:var(--t1); font-weight:600; }
+.know-k { font-family:var(--f-mono); font-size:12px; color:var(--t2); }
+.know-v { font-family:var(--f-mono); font-size:12px; color:var(--t1); font-weight:600; }
 .know-v.gold   { color:var(--warning); }
 .know-v.danger { color:#ff9b9b; }
 .know-v.green  { color:var(--green); }
@@ -479,7 +484,7 @@ html, body {
 .uz-sub  { font-size:9px; color:var(--t3); margin-top:1px; }
 #upload-status { font-family:var(--f-mono); font-size:10px; color:var(--warning); min-height:14px; }
 
-.tool-btn { width:100%; padding:5px 9px; border-radius:5px; background:var(--bg-card); border:1px solid var(--border); color:var(--t2); font-size:10px; font-weight:700; letter-spacing:0.5px; cursor:pointer; transition:all 0.2s; text-align:left; }
+.tool-btn { width:100%; padding:6px 10px; border-radius:5px; background:var(--bg-card); border:1px solid var(--border); color:var(--t2); font-size:11px; font-weight:700; letter-spacing:0.5px; cursor:pointer; transition:all 0.2s; text-align:left; }
 .tool-btn:hover { border-color:var(--border-hi); color:var(--t1); background:var(--bg-hover); }
 .tool-btn.primary { background:rgba(0,212,164,0.1); border-color:rgba(0,212,164,0.3); color:var(--green); }
 .tool-btn.primary:hover { background:rgba(0,212,164,0.2); }
@@ -510,7 +515,7 @@ html, body {
     <div class="s-indicator err" id="claude-status"><span class="s-dot"></span>CLAUDE</div>
     <div class="s-indicator warn" id="hands-status"><span class="s-dot"></span>0 HANDS</div>
   </div>
-  <button class="popout-btn" onclick="window.open(window.location.href,'_blank','width=1440,height=900')">⊞ POPOUT</button>
+
 </div>
 
 <!-- ── APP ── -->
@@ -868,8 +873,8 @@ function cardHTML(cardStr, type, connecting) {
   if (!cardStr) return '';
   const suit = cardStr.slice(-1);
   const rank = cardStr.slice(0,-1);
-  const red  = suit === '♥' || suit === '♦';
-  const cls  = [type, red ? 'red' : 'black', connecting ? 'connecting' : ''].filter(Boolean).join(' ');
+  const suitClass = suit === '♥' ? 'hearts' : suit === '♦' ? 'diamonds' : suit === '♠' ? 'spades' : 'clubs';
+  const cls  = [type, suitClass, connecting ? 'connecting' : ''].filter(Boolean).join(' ');
   const star = connecting ? '<span class="connect-star">★</span>' : '';
   return `<div class="card ${cls}">${star}<div class="rank">${rank}</div><div class="suit">${suit}</div></div>`;
 }
@@ -878,8 +883,8 @@ function predCardHTML(cardStr, connecting) {
   if (!cardStr) return '';
   const suit = cardStr.slice(-1);
   const rank = cardStr.slice(0,-1);
-  const red  = suit === '♥' || suit === '♦';
-  const cls  = [red ? 'red' : 'black', connecting ? 'connecting' : ''].filter(Boolean).join(' ');
+  const suitClass = suit === '♥' ? 'hearts' : suit === '♦' ? 'diamonds' : suit === '♠' ? 'spades' : 'clubs';
+  const cls  = [suitClass, connecting ? 'connecting' : ''].filter(Boolean).join(' ');
   return `<div class="pred-card ${cls}"><div class="rank">${rank}</div><div class="suit">${suit}</div></div>`;
 }
 
@@ -1106,16 +1111,25 @@ function renderPlayerHub(d) {
   const stats = d.player_stats || state.playerStats || {};
   if (Object.keys(stats).length) Object.assign(state.playerStats, stats);
 
-  const players = Object.entries(state.playerStats)
-    .filter(([,s]) => (s.handsTracked||0) >= 1)
-    .sort((a,b) => (b[1].handsTracked||0) - (a[1].handsTracked||0));
+  const snap = d.all_players_snap || {};
+
+  // Build player list from snap (everyone at table) + overlay HUD stats where available
+  // snap has live data immediately; stats has historical HUD data after hands played
+  const snapNames = Object.keys(snap).filter(n => !snap[n].isHero);
+  const statsNames = Object.keys(state.playerStats).filter(n => (state.playerStats[n].handsTracked||0) >= 1);
+  const allNames = [...new Set([...snapNames, ...statsNames])];
+
+  const players = allNames.map(name => {
+    const s = state.playerStats[name] || {};
+    const snapData = snap[name] || {};
+    return [name, { ...s, _snap: snapData }];
+  }).sort((a,b) => (b[1].handsTracked||0) - (a[1].handsTracked||0));
 
   const countEl = document.getElementById('player-count');
   if (countEl) countEl.textContent = players.length;
   if (!players.length) return;
 
   const el = document.getElementById('player-list');
-  const snap = d.all_players_snap || {};
 
   el.innerHTML = players.map(([name, s]) => {
     const isDanger = s.isDanger || (s.winRate >= 60 && (s.handsTracked||0) >= 5);
@@ -1139,7 +1153,7 @@ function renderPlayerHub(d) {
     const short     = name.length > 13 ? name.slice(0,13)+'…' : name;
 
     // Live stack from DOM snap
-    const snapData = snap[name] || {};
+    const snapData = s._snap || {};
     const stackLine = snapData.stack ? `<span>Stack: ${snapData.stack}</span>` : '';
     const lastHand  = snapData.handMessage ? `<span>${snapData.handMessage}</span>` : '';
 
