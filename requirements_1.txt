@@ -1,8 +1,8 @@
 fastapi==0.110.0
 uvicorn[standard]==0.29.0
-mem0ai==0.1.16
+mem0ai==1.0.11
 pydantic==2.6.4
-anthropic==0.25.0
+anthropic==0.94.0
 websockets==12.0
-langgraph==0.1.19
+langgraph==1.1.0
 letta-client==1.10.2
