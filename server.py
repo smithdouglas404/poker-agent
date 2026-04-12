@@ -360,7 +360,7 @@ MEM0 MEMORIES:
 Update your memory. Respond in JSON only:
 {{
   "nextHand": "1-2 sentence forward-looking instruction for next hand",
-  "weight_updates": {{"carryBoost": 0.0, "jeezyWarning": false, "allinWarning": false, "hotCards": []}}
+  "weight_updates": {{"carryBoost": 0.0, "dangerWarning": false, "allinWarning": false, "hotCards": []}}
 }}"""
 
                 response = client.agents.messages.create(
@@ -395,7 +395,7 @@ Opponents: {shown}
 Stats: WR={ls.get('win_rate',0)}% Carry={ls.get('carry_rate',0)}% Danger={state['danger_players']}
 Memories: {'; '.join(state['memories'][:3]) if state['memories'] else 'none'}
 
-Respond JSON only: {{"nextHand": "instruction", "weight_updates": {{"carryBoost": 0.0, "jeezyWarning": false, "allinWarning": false, "hotCards": []}}}}"""
+Respond JSON only: {{"nextHand": "instruction", "weight_updates": {{"carryBoost": 0.0, "dangerWarning": false, "allinWarning": false, "hotCards": []}}}}"""
         resp = client.messages.create(model="claude-sonnet-4-5", max_tokens=300,
                                       messages=[{"role":"user","content":prompt}])
         return {"letta_response": resp.content[0].text.strip()}
@@ -417,7 +417,7 @@ def node_parse_updates(state: HandAnalysisState) -> dict:
         return {
             "next_hand":      parsed.get("nextHand", ""),
             "weight_updates": parsed.get("weight_updates", {
-                "carryBoost": 0.0, "jeezyWarning": False,
+                "carryBoost": 0.0, "dangerWarning": False,
                 "allinWarning": False, "hotCards": []
             })
         }
@@ -425,13 +425,13 @@ def node_parse_updates(state: HandAnalysisState) -> dict:
         print(f"[graph:parse_updates] {e}")
         return {
             "next_hand": "",
-            "weight_updates": {"carryBoost": 0.0, "jeezyWarning": False, "allinWarning": False, "hotCards": []}
+            "weight_updates": {"carryBoost": 0.0, "dangerWarning": False, "allinWarning": False, "hotCards": []}
         }
 
 def node_apply_danger(state: HandAnalysisState) -> dict:
-    """Node 5a: Danger player detected — force jeezyWarning on."""
+    """Node 5a: Danger player detected — force dangerWarning on."""
     wu = dict(state.get("weight_updates", {}))
-    wu["jeezyWarning"] = True
+    wu["dangerWarning"] = True
     return {"weight_updates": wu}
 
 def node_apply_carry(state: HandAnalysisState) -> dict:
@@ -461,7 +461,7 @@ def node_store_memory(state: HandAnalysisState) -> dict:
         wu_summary = []
         if weight_updates.get("carryBoost", 0) > 0:
             wu_summary.append(f"carry boost {weight_updates['carryBoost']:.1f}")
-        if weight_updates.get("jeezyWarning"):
+        if weight_updates.get("dangerWarning"):
             wu_summary.append(f"danger: {danger}")
         if weight_updates.get("allinWarning"):
             wu_summary.append("all-in pattern")

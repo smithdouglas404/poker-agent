@@ -1345,9 +1345,9 @@ async function runAnalysis() {
       const brief = document.getElementById('presession-brief');
       if (brief) brief.innerHTML = `<div class="brief-item"><strong>Win rate:</strong>${data.stats?.win_rate||'—'}% across ${data.stats?.total||0} hands</div><div class="brief-item"><strong>Carry rate:</strong>${data.stats?.carry_rate||'—'}%</div><div class="brief-item"><strong>Mem0 memories:</strong>${data.mem0_memories||0} insights stored</div>`;
       if (resultEl) { resultEl.innerHTML = `<div style="font-size:11px;color:var(--t2);line-height:1.6;white-space:pre-wrap">${(data.claude_analysis||'').slice(0,600)}…</div>`; }
-      alert('Analysis complete!\n\n' + (data.claude_analysis||'').slice(0,400) + '…');
+      if (analysisTab) analysisTab.click();
     }
-  } catch(e) { alert('Analysis error: ' + e.message); }
+  } catch(e) { if (resultEl) resultEl.innerHTML = `<div style='color:var(--red);font-size:11px'>Error: ${e.message}</div>`; }
   btns.forEach(b => b.textContent = '🔍 Full Analysis');
 }
 
@@ -1626,10 +1626,8 @@ function stopPolling() {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     _pollActive = false;
-    console.log('[PNA] Tab hidden — polling paused');
   } else {
     _pollActive = true;
-    console.log('[PNA] Tab visible — polling resumed');
     // Immediately refresh on return
     loadNarratives();
     renderKnowledge();
@@ -1646,7 +1644,7 @@ if (typeof BroadcastChannel !== 'undefined') {
       // Another tab is already polling — stand down
       _isPrimary = false;
       stopPolling();
-      console.log('[PNA] Secondary tab — polling handed off to primary');
+
     }
   };
   // Announce we are polling
