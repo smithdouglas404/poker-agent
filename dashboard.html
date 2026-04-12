@@ -1580,9 +1580,71 @@ renderAll = function() {
 // ── BOOT ───────────────────────────────────────────────────────────────────────
 initSession();
 renderKnowledge();
-setInterval(loadNarratives, 5000);
-setInterval(renderKnowledge, 10000);
-setInterval(loadPlayerStats, 15000);
-setInterval(loadMem0, 30000);
+
+// ── SMART POLLING — visibility-aware, backs off when tab hidden ───────────────
+let _pollActive = true;
+let _narrativeInterval = null;
+let _knowledgeInterval = null;
+let _statsInterval = null;
+let _mem0Interval = null;
+
+function startPolling() {
+  if (_narrativeInterval) return; // already running
+  _narrativeInterval = setInterval(() => { if (_pollActive) loadNarratives(); }, 15000);
+  _knowledgeInterval = setInterval(() => { if (_pollActive) renderKnowledge(); }, 15000);
+  _statsInterval     = setInterval(() => { if (_pollActive) loadPlayerStats(); }, 30000);
+  _mem0Interval      = setInterval(() => { if (_pollActive) loadMem0(); }, 60000);
+}
+
+function stopPolling() {
+  clearInterval(_narrativeInterval); _narrativeInterval = null;
+  clearInterval(_knowledgeInterval); _knowledgeInterval = null;
+  clearInterval(_statsInterval);     _statsInterval     = null;
+  clearInterval(_mem0Interval);      _mem0Interval      = null;
+}
+
+// Pause polling when tab is hidden, resume when visible
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    _pollActive = false;
+    console.log('[PNA] Tab hidden — polling paused');
+  } else {
+    _pollActive = true;
+    console.log('[PNA] Tab visible — polling resumed');
+    // Immediately refresh on return
+    loadNarratives();
+    renderKnowledge();
+  }
+});
+
+// Only one dashboard should poll — use BroadcastChannel to coordinate
+// If another tab is already polling, this one stands down
+let _isPrimary = true;
+if (typeof BroadcastChannel !== 'undefined') {
+  const bc = new BroadcastChannel('pna_dashboard');
+  bc.onmessage = (e) => {
+    if (e.data === 'polling' && _isPrimary) {
+      // Another tab is already polling — stand down
+      _isPrimary = false;
+      stopPolling();
+      console.log('[PNA] Secondary tab — polling handed off to primary');
+    }
+  };
+  // Announce we are polling
+  setInterval(() => { if (_isPrimary && !document.hidden) bc.postMessage('polling'); }, 10000);
+  // If we don't hear from a primary within 12s, take over
+  let _primaryTimeout = setTimeout(() => { _isPrimary = true; startPolling(); }, 12000);
+  bc.onmessage = (e) => {
+    if (e.data === 'polling') {
+      clearTimeout(_primaryTimeout);
+      if (_isPrimary) {
+        // We heard from another primary — stand down if they came first
+        // Simple tie-break: keep going, they'll stand down
+      }
+    }
+  };
+}
+
+startPolling();
 </script>
 </html>

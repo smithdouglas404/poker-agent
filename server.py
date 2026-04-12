@@ -44,6 +44,60 @@ async def lifespan(app):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+def extract_player_id(full_name: str) -> str:
+    import re
+    m = re.search(r'@\s*([A-Za-z0-9_-]+)\s*$', full_name or '')
+    return m.group(1) if m else full_name
+
+def extract_display_name(full_name: str) -> str:
+    import re
+    m = re.match(r'^(.+?)\s*@', full_name or '')
+    return m.group(1).strip() if m else full_name
+
+def upsert_global_player(db, player_name: str, game_id: str, p: dict):
+    player_id = extract_player_id(player_name)
+    display_name = extract_display_name(player_name)
+    existing = db.execute("SELECT all_names, last_game_id FROM global_players WHERE player_id=?", (player_id,)).fetchone()
+    if existing:
+        all_names = json.loads(existing["all_names"] or "[]")
+        is_new_game = existing["last_game_id"] != game_id
+    else:
+        all_names = []
+        is_new_game = True
+    if display_name not in all_names:
+        all_names.append(display_name)
+    db.execute(
+        """INSERT INTO global_players
+            (player_id,display_name,all_names,first_game_id,last_game_id,games_played,
+             total_hands,vpip_count,pfr_count,threebet_count,total_agg,total_passive,
+             win_count,showdown_count,showdown_wins,allin_count)
+            VALUES(?,?,?,?,?,1,1,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(player_id) DO UPDATE SET
+                display_name=excluded.display_name,
+                all_names=?,
+                last_seen=datetime('now'),
+                last_game_id=excluded.last_game_id,
+                games_played=global_players.games_played+CASE WHEN ? THEN 1 ELSE 0 END,
+                total_hands=global_players.total_hands+1,
+                vpip_count=global_players.vpip_count+excluded.vpip_count,
+                pfr_count=global_players.pfr_count+excluded.pfr_count,
+                threebet_count=global_players.threebet_count+excluded.threebet_count,
+                total_agg=global_players.total_agg+excluded.total_agg,
+                total_passive=global_players.total_passive+excluded.total_passive,
+                win_count=global_players.win_count+excluded.win_count,
+                showdown_count=global_players.showdown_count+excluded.showdown_count,
+                showdown_wins=global_players.showdown_wins+excluded.showdown_wins,
+                allin_count=global_players.allin_count+excluded.allin_count,
+                ts_updated=datetime('now')""",
+        (player_id, display_name, json.dumps(all_names), game_id, game_id,
+         p.get("vpip",0), p.get("pfr",0), p.get("three_bet",0),
+         p.get("aggressive_acts",0), p.get("passive_acts",0),
+         p.get("won",0), p.get("went_to_showdown",0),
+         1 if (p.get("won",0) and p.get("went_to_showdown",0)) else 0,
+         p.get("all_in",0),
+         json.dumps(all_names), 1 if is_new_game else 0)
+    )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # TODO: tighten to Railway domain before public launch
@@ -623,6 +677,30 @@ def init_db():
             UNIQUE(game_id, hand_num, player_name)
         );
 
+        CREATE TABLE IF NOT EXISTS global_players (
+            player_id       TEXT PRIMARY KEY,   -- "q_yuipwavF" from "Pookie @ q_yuipwavF"
+            display_name    TEXT,               -- most recent display name
+            all_names       TEXT DEFAULT '[]',  -- JSON array of all names seen
+            first_seen      TEXT DEFAULT (datetime('now')),
+            last_seen       TEXT DEFAULT (datetime('now')),
+            first_game_id   TEXT,
+            last_game_id    TEXT,
+            games_played    INTEGER DEFAULT 0,
+            total_hands     INTEGER DEFAULT 0,
+            vpip_count      INTEGER DEFAULT 0,
+            pfr_count       INTEGER DEFAULT 0,
+            threebet_count  INTEGER DEFAULT 0,
+            total_agg       INTEGER DEFAULT 0,
+            total_passive   INTEGER DEFAULT 0,
+            win_count       INTEGER DEFAULT 0,
+            showdown_count  INTEGER DEFAULT 0,
+            showdown_wins   INTEGER DEFAULT 0,
+            allin_count     INTEGER DEFAULT 0,
+            commentary      TEXT    DEFAULT '',
+            notes           TEXT    DEFAULT '',
+            ts_updated      TEXT    DEFAULT (datetime('now'))
+        );
+
         CREATE TABLE IF NOT EXISTS player_stats (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             game_id         TEXT NOT NULL,
@@ -690,6 +768,8 @@ def init_db():
         ("player_stats", "cbet_count",           "INTEGER DEFAULT 0"),
         ("player_stats", "faced_cbet",           "INTEGER DEFAULT 0"),
         ("player_stats", "folded_to_cbet",       "INTEGER DEFAULT 0"),
+        ("player_stats", "player_id",             "TEXT DEFAULT ''"),
+        ("player_hands", "player_id",             "TEXT DEFAULT ''"),
     ]
     with get_db() as db:
         for table, col, typedef in migrations:
@@ -1046,6 +1126,11 @@ async def log_hand(data: HandData):
                      p.get("in_steal_position",0) if p.get("pfr",0) else 0,  # cbet_opps = was PFR
                      p.get("made_cbet",0), p.get("faced_cbet",0), p.get("folded_to_cbet",0))
                 )
+                # ── Global player upsert — cross-session tracking ─────────────
+                try:
+                    upsert_global_player(db, p.get("player_name",""), game_id, p)
+                except Exception as gpe:
+                    pass  # never let global player upsert break hand storage
 
         result = "WON" if data.hero_won else ("FOLDED" if data.hero_folded else "LOST")
         mode   = "[AWAY]" if data.away_mode else ""
@@ -1316,6 +1401,29 @@ async def health():
     }
 
 # ── Core Claude analysis function (called by queue) ──────────────────────────
+def _compute_table_dynamic(data_dict: dict) -> str:
+    """Generate one-line table dynamic summary from current state"""
+    try:
+        game_id = data_dict.get("game_id","")
+        with get_db() as db:
+            danger = db.execute(
+                "SELECT COUNT(*) as n FROM player_stats WHERE game_id=? AND CAST(win_count AS REAL)/MAX(hands_seen,1)>=0.60 AND hands_seen>=5",
+                (game_id,)
+            ).fetchone()
+            carry = db.execute(
+                "SELECT AVG(CAST(pot AS REAL)) as avg_pot FROM hands WHERE game_id=? ORDER BY id DESC LIMIT 20",
+                (game_id,)
+            ).fetchone()
+        danger_n = danger["n"] if danger else 0
+        if danger_n >= 2:
+            return "⚠ Aggressive table — tighten range, avoid thin value bets"
+        elif danger_n == 1:
+            return "⚠ One danger player — 3bet lighter, call their river overbets"
+        else:
+            return "✓ Table passive — exploit with steals and thin value bets"
+    except:
+        return ""
+
 async def _run_between_hands(data_dict: dict):
     """
     Between-hands analysis via LangGraph + Letta + Mem0.
@@ -1747,6 +1855,109 @@ async def get_player_stats(game_id: str):
                 "fold_to_steal_pct": round(s["fold_to_steal"] / fcs * 100, 1),
             }
         return {"ok": True, "players": [compute(r) for r in rows]}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+# ── GET /global_player/{player_id} — Cross-session stats for one player ─────────
+@app.get("/global_player/{player_id}")
+async def get_global_player(player_id: str):
+    try:
+        with get_db() as db:
+            row = db.execute("SELECT * FROM global_players WHERE player_id=?", (player_id,)).fetchone()
+        if not row:
+            return {"ok": False, "error": "Player not found"}
+        r = dict(row)
+        h  = r["total_hands"]     or 1
+        pa = r["total_passive"]   or 1
+        sd = r["showdown_count"]  or 1
+        return {"ok": True, "player": {
+            **r,
+            "all_names":    json.loads(r.get("all_names","[]")),
+            "vpip_pct":     round(r["vpip_count"]     / h  * 100, 1),
+            "pfr_pct":      round(r["pfr_count"]       / h  * 100, 1),
+            "threebet_pct": round(r["threebet_count"]  / h  * 100, 1),
+            "af":           round(r["total_agg"]       / pa, 2),
+            "win_pct":      round(r["win_count"]       / h  * 100, 1),
+            "wsd_pct":      round(r["showdown_wins"]   / sd * 100, 1),
+        }}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+# ── GET /global_players — All known players cross-session ─────────────────────
+@app.get("/global_players")
+async def get_global_players(limit: int = 50):
+    try:
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT * FROM global_players ORDER BY total_hands DESC LIMIT ?", (limit,)
+            ).fetchall()
+        def compute(r):
+            r = dict(r)
+            h  = r["total_hands"]   or 1
+            pa = r["total_passive"] or 1
+            sd = r["showdown_count"] or 1
+            return {**r,
+                "all_names":    json.loads(r.get("all_names","[]")),
+                "vpip_pct":     round(r["vpip_count"]    / h  * 100, 1),
+                "pfr_pct":      round(r["pfr_count"]     / h  * 100, 1),
+                "af":           round(r["total_agg"]     / pa, 2),
+                "win_pct":      round(r["win_count"]     / h  * 100, 1),
+                "wsd_pct":      round(r["showdown_wins"] / sd * 100, 1),
+            }
+        return {"ok": True, "players": [compute(r) for r in rows]}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+# ── POST /global_player_note — Save note for a player ─────────────────────────
+class PlayerNoteRequest(BaseModel):
+    player_id: str
+    notes: str
+
+@app.post("/global_player_note")
+async def save_player_note(data: PlayerNoteRequest):
+    try:
+        with get_db() as db:
+            db.execute(
+                "UPDATE global_players SET notes=?, ts_updated=datetime('now') WHERE player_id=?",
+                (data.notes, data.player_id)
+            )
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+# ── GET /export_session/{game_id} — Export session data as JSON ───────────────
+@app.get("/export_session/{game_id}")
+async def export_session(game_id: str):
+    try:
+        with get_db() as db:
+            hands = db.execute(
+                "SELECT * FROM hands WHERE game_id=? ORDER BY hand_num", (game_id,)
+            ).fetchall()
+            players = db.execute(
+                "SELECT * FROM player_stats WHERE game_id=?", (game_id,)
+            ).fetchall()
+            narratives = db.execute(
+                "SELECT * FROM claude_log WHERE game_id=? ORDER BY ts", (game_id,)
+            ).fetchall()
+            memories = db.execute(
+                "SELECT * FROM mem0_log WHERE game_id=? ORDER BY ts", (game_id,)
+            ).fetchall()
+        total = len(hands)
+        wins  = sum(1 for h in hands if h["hero_won"])
+        return {
+            "ok": True,
+            "game_id": game_id,
+            "exported_at": datetime.utcnow().isoformat(),
+            "summary": {
+                "total_hands": total,
+                "wins": wins,
+                "win_rate": round(wins/total*100,1) if total else 0,
+            },
+            "hands":      [dict(h) for h in hands],
+            "players":    [dict(p) for p in players],
+            "narratives": [dict(n) for n in narratives],
+            "memories":   [dict(m) for m in memories],
+        }
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
