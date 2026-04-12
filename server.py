@@ -1054,7 +1054,6 @@ async def log_hand(data: HandData):
         if data.shown_hands:
             memory_text += f", opponents showed: {', '.join(f'{p}: {chr(32).join(c)}' for p,c in data.shown_hands.items())}"
 
-        mem0 = get_mem0()
         # Raw hand data goes to SQLite only — NOT Mem0
         # Mem0 receives AI insights from LangGraph node_store_memory only
         mem0_id = None
@@ -1062,7 +1061,8 @@ async def log_hand(data: HandData):
             db.execute("INSERT INTO mem0_log (game_id,session_id,hand_num,memory_text,memory_id) VALUES(?,?,?,?,?)",
                        (game_id, data.session_id, data.hand_num, memory_text, "pending"))
 
-        await _claude_queue.put({
+        try:
+            _claude_queue.put_nowait({
             "session_id": data.session_id, "game_id": game_id,
             "hand_num": data.hand_num, "hole_cards": data.hole_cards,
             "flop": data.flop, "turn": data.turn, "river": data.river,
@@ -1070,7 +1070,9 @@ async def log_hand(data: HandData):
             "all_in": data.all_in, "away_mode": data.away_mode,
             "pot": data.pot, "shown_hands": data.shown_hands,
             "player_stats": {p["player_name"]: p for p in data.players_in_hand},
-        })
+            })
+        except asyncio.QueueFull:
+            print(f"[queue] Full — skipping LangGraph for hand {data.hand_num}")
 
         # Auto-trigger Claude narrative for players crossing 10/25/50 hand milestones
         NARRATIVE_MILESTONES = {10, 25, 50, 100}
@@ -1178,10 +1180,11 @@ Reference specific hands from memory where possible. Do not assume anything not 
         with get_db() as db:
             db.execute(
                 """INSERT INTO analysis_log
-                   (hands_at_time, mem0_count, win_rate, carry_rate, allin_wr,
+                   (game_id, hands_at_time, mem0_count, win_rate, carry_rate, allin_wr,
                     street_wins, street_totals, memories_snapshot, claude_narrative)
-                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
                 (
+                    game_id,
                     stats.get("total", 0),
                     len(memories),
                     stats.get("win_rate", 0),
@@ -1246,7 +1249,7 @@ async def all_memories(game_id: str = ""):
                 })
         with get_db() as db:
             db_log = [dict(r) for r in db.execute(
-                "SELECT hand_num, memory_text, ts FROM mem0_log WHERE game_id=? ORDER BY ts DESC", (session_id,)
+                "SELECT hand_num, memory_text, ts FROM mem0_log WHERE game_id=? ORDER BY ts DESC", (game_id,)
             ).fetchall()]
         return {"ok": True, "total": len(memories), "memories": memories, "db_log": db_log}
     except Exception as e:
@@ -1359,7 +1362,7 @@ async def _run_between_hands(data_dict: dict):
         live_stats     = result.get("live_stats", {})
         danger_players = result.get("danger_players", [])
 
-        await manager.broadcast(session_id, {
+        await manager.broadcast(game_id, {
             "type": "weight_updates",
             "data": {
                 "hand_num":       data_dict.get("hand_num", 0),
@@ -1394,7 +1397,10 @@ class BetweenHandsData(BaseModel):
 
 @app.post("/between_hands")
 async def between_hands(data: BetweenHandsData):
-    await _claude_queue.put(data.__dict__)
+    try:
+        _claude_queue.put_nowait(data.__dict__)
+    except asyncio.QueueFull:
+        return {"ok": False, "error": "queue full"}
     return {"ok": True, "queued": True}
 
 # ── GET /narratives — all stored Claude next-hand notes ──────────────────────
@@ -1486,6 +1492,12 @@ class RawData(BaseModel):
 @app.post("/raw")
 async def post_raw(data: RawData):
     payload = data.model_dump()
+
+    # Assign route_key FIRST — used everywhere below
+    global _active_game_id
+    route_key       = data.game_id or data.session_id
+    _active_game_id = route_key
+
     try:
         with get_db() as db:
             hc = db.execute("SELECT COUNT(*) FROM hands WHERE game_id=?", (route_key,)).fetchone()[0]
@@ -1498,9 +1510,6 @@ async def post_raw(data: RawData):
         print(f"[raw] DB count failed: {e}")
         payload["server_status"] = {"hands_logged": 0, "mem0_live": False, "claude_live": False}
 
-    global _active_game_id
-    route_key       = data.game_id or data.session_id
-    _active_game_id = route_key
     _latest_state[route_key] = payload
     await manager.broadcast(route_key, {"type": "raw", "data": payload})
     return {"ok": True}
@@ -1534,8 +1543,8 @@ async def get_state(session_id: str):
                 (session_id,)
             ).fetchall()
             hands = db.execute(
-                "SELECT hand_num, hole_cards, board, hero_won, hero_folded, shown_hands FROM hands WHERE game_id=? "
-                "WHERE session_id=? ORDER BY id DESC LIMIT 20",
+                "SELECT hand_num, hole_cards, board, hero_won, hero_folded, shown_hands FROM hands "
+                "WHERE game_id=? ORDER BY id DESC LIMIT 20",
                 (session_id,)
             ).fetchall()
             hc = db.execute("SELECT COUNT(*) FROM hands WHERE game_id=?", (session_id,)).fetchone()[0]
@@ -1651,7 +1660,8 @@ async def upload_csv(request: FastAPIRequest, game_id: str = ""):
         # LangGraph node_store_memory will write AI insights to Mem0 (not raw data)
         if stored > 0 and hands:
             last = hands[-1]
-            await _claude_queue.put({
+            try:
+                _claude_queue.put_nowait({
                 "session_id":  target_game_id,
                 "game_id":     target_game_id,
                 "hand_num":    last["hand_num"],
@@ -1666,7 +1676,9 @@ async def upload_csv(request: FastAPIRequest, game_id: str = ""):
                 "pot":         0,
                 "shown_hands": {},
                 "player_stats": {},
-            })
+                })
+            except asyncio.QueueFull:
+                print("[queue] Full — skipping LangGraph for upload")
 
         return {"ok": True, "hands": stored, "game_id": target_game_id, "model": model_json}
     except Exception as e:
