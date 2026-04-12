@@ -1598,7 +1598,14 @@ async def dashboard():
     try:
         html_path = Path(__file__).parent / "dashboard.html"
         if html_path.exists():
-            return HTMLResponse(content=html_path.read_text())
+            return HTMLResponse(
+                content=html_path.read_text(),
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                }
+            )
         return HTMLResponse(content="<h1>Dashboard not found</h1>", status_code=404)
     except Exception as e:
         return HTMLResponse(content=f"<h1>Error: {e}</h1>", status_code=500)
