@@ -942,13 +942,39 @@ body {
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const params   = new URLSearchParams(window.location.search);
-const SESSION  = params.get('session') || 'unknown';
-const GAME_ID  = params.get('game_id') || SESSION;
-const SERVER   = params.get('server')  || 'https://poker-agent-production.up.railway.app';
-const WS_URL   = SERVER.replace('https://', 'wss://').replace('http://', 'ws://');
+const SERVER = (new URLSearchParams(window.location.search).get('server'))
+               || 'https://poker-agent-production.up.railway.app';
+const WS_URL = SERVER.replace('https://','wss://').replace('http://','ws://');
 
-document.getElementById('session-info').textContent = 'GAME ' + (GAME_ID||SESSION).slice(0,20);
+// SESSION and GAME_ID are set after fetching /active
+let SESSION  = new URLSearchParams(window.location.search).get('session') || '';
+let GAME_ID  = new URLSearchParams(window.location.search).get('game_id') || '';
+
+async function initSession() {
+  // If session already in URL (opened via popup with params), use it
+  if (SESSION && SESSION !== 'unknown') {
+    document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
+    connectWS();
+    loadInitialState();
+    loadNarratives();
+    return;
+  }
+  // Otherwise ask the server what game is active right now
+  try {
+    const r = await fetch(`${SERVER}/active`);
+    const d = await r.json();
+    if (d.ok && d.game_id) {
+      SESSION = d.game_id;
+      GAME_ID = d.game_id;
+      document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
+    }
+  } catch(e) {
+    console.warn('[dashboard] /active failed:', e);
+  }
+  connectWS();
+  loadInitialState();
+  loadNarratives();
+}
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let state = {
@@ -964,7 +990,9 @@ let ws = null;
 let wsRetry = 0;
 
 function connectWS() {
-  const url = `${WS_URL}/ws/${SESSION}`;
+  const wsUrl    = window._WS_URL   || WS_URL;
+  const session  = window._SESSION  || SESSION;
+  const url = `${wsUrl}/ws/${session}`;
   try {
     ws = new WebSocket(url);
   } catch(e) {
@@ -1675,15 +1703,13 @@ document.getElementById('upload-input').addEventListener('change', async e => {
   }
 });
 
-// ── BOOT ──────────────────────────────────────────────────────────────────────
-connectWS();
-loadInitialState();
-loadNarratives();
-renderKnowledge();
+// ── RECEIVE GAME ID FROM EXTENSION ───────────────────────────────────────────
 
-// Poll narratives every 5 seconds to catch new between-hands results
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+// initSession() fetches /active from server to get game ID, then connects WS
+initSession();
+renderKnowledge();
 setInterval(loadNarratives, 5000);
-// Refresh knowledge panel every 10 seconds
 setInterval(renderKnowledge, 10000);
 </script>
 </body>

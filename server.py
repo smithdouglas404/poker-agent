@@ -140,7 +140,8 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # Latest raw state per session (for reconnect)
-_latest_state: Dict[str, dict] = {}
+_latest_state:   Dict[str, dict] = {}
+_active_game_id: str = ""  # most recently active game — dashboard fetches this on load
 
 # ── LangGraph — Between-Hands Workflow ───────────────────────────────────────
 # Replaces the manual _run_between_hands prompt engineering.
@@ -1170,11 +1171,18 @@ async def post_raw(data: RawData):
     except Exception:
         payload["server_status"] = {"hands_logged": 0, "mem0_live": False, "claude_live": False}
 
+    global _active_game_id
+    _active_game_id = data.game_id or data.session_id
     _latest_state[data.session_id] = payload
     await manager.broadcast(data.session_id, {"type": "raw", "data": payload})
     return {"ok": True}
 
 # ── GET /api/state/{session_id} — full state for dashboard on reconnect ────────
+@app.get("/active")
+async def get_active():
+    """Dashboard calls this on load to get the current game ID — no URL params needed."""
+    return {"game_id": _active_game_id, "ok": bool(_active_game_id)}
+
 @app.get("/api/state/{session_id}")
 async def get_state(session_id: str):
     try:
