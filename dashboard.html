@@ -1310,8 +1310,20 @@ let SESSION  = new URLSearchParams(window.location.search).get('session') || '';
 let GAME_ID  = new URLSearchParams(window.location.search).get('game_id') || '';
 
 async function initSession() {
-  // If session already in URL, use it
+  // If game_id passed directly in URL — use immediately, no polling needed
+  if (GAME_ID && GAME_ID !== 'unknown') {
+    SESSION = GAME_ID;
+    document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
+    connectWS();
+    loadInitialState();
+    loadNarratives();
+    setTimeout(loadPlayerStats, 2000);
+    setTimeout(loadMem0, 3000);
+    return;
+  }
+  // Fallback: check SESSION param
   if (SESSION && SESSION !== 'unknown') {
+    GAME_ID = SESSION;
     document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
     connectWS();
     loadInitialState();
@@ -1337,13 +1349,9 @@ async function initSession() {
         return;
       }
     } catch(e) {}
-    // Not ready yet — retry
-    if (attempts < 10) {
-      setTimeout(tryFetch, 1000);
-    } else {
-      // Give up — connect anyway (will show WS error but won't hang forever)
-      connectWS();
-    }
+    // Not ready yet — retry indefinitely every 2s for first 30s, then every 5s
+    const delay = attempts < 15 ? 2000 : 5000;
+    setTimeout(tryFetch, delay);
   };
   tryFetch();
 }
@@ -1379,7 +1387,12 @@ function connectWS() {
     try {
       const msg = JSON.parse(evt.data);
 
-      if (msg.type === 'raw') {
+      if (msg.type === 'status') {
+        // Immediate status on WS connect — no need to wait for /raw
+        setStatus('mem0-status',   msg.data.mem0_live   ? 'MEM0 ✓'   : 'MEM0 ✗',   msg.data.mem0_live   ? 'ok' : 'err');
+        setStatus('claude-status', msg.data.claude_live ? 'CLAUDE ✓' : 'CLAUDE ✗', msg.data.claude_live ? 'ok' : 'err');
+
+      } else if (msg.type === 'raw') {
         state.raw = msg.data;
         renderAll();
 

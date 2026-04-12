@@ -1445,7 +1445,17 @@ async def narratives_all():
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await manager.connect(session_id, websocket)
-    # Send latest state on connect — check both keys
+    # Always send status immediately on connect so dashboard pills go green
+    try:
+        await websocket.send_json({"type": "status", "data": {
+            "mem0_live":   bool(MEM0_API_KEY),
+            "claude_live": bool(ANTHROPIC_KEY),
+            "letta_live":  bool(LETTA_API_KEY),
+            "game_id":     session_id,
+        }})
+    except Exception:
+        pass
+    # Send latest raw state if available
     state = _latest_state.get(session_id) or _latest_state.get(_active_game_id)
     if state:
         try:
