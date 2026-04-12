@@ -191,8 +191,8 @@ def node_load_context(state: HandAnalysisState) -> dict:
             recent50 = [dict(r) for r in db.execute("SELECT hole_cards, board FROM hands WHERE game_id=? ORDER BY id DESC LIMIT 50", (state["game_id"],)).fetchall()]
         carry_pairs = sum(
             1 for i in range(1, len(recent50))
-            if set(json.loads(recent50[i-1].get("board","[]")||"[]")) &
-               set(json.loads(recent50[i].get("hole_cards","[]")||"[]") + json.loads(recent50[i].get("board","[]")||"[]"))
+            if set(json.loads(recent50[i-1].get("board","[]") or "[]")) &
+               set(json.loads(recent50[i].get("hole_cards","[]") or "[]") + json.loads(recent50[i].get("board","[]") or "[]"))
         )
         carry_rate = round(carry_pairs / max(len(recent50)-1, 1) * 100, 1)
 
