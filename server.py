@@ -1115,21 +1115,23 @@ async def narratives_all():
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await manager.connect(session_id, websocket)
-    # Send latest state on connect
-    if session_id in _latest_state:
+    # Send latest state on connect — check both keys
+    state = _latest_state.get(session_id) or _latest_state.get(_active_game_id)
+    if state:
         try:
-            await websocket.send_json({"type": "raw", "data": _latest_state[session_id]})
+            await websocket.send_json({"type": "raw", "data": state})
         except Exception:
             pass
     try:
         while True:
-            await websocket.receive_text()  # keep alive
+            await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(session_id, websocket)
 
 # ── POST /raw — extension sends all DOM data + computed decision ───────────────
 class RawData(BaseModel):
-    session_id: str
+    session_id:   str
+    game_id:      str  = ""   # game ID from URL — primary key for WS routing
     hole_cards:   list  = []
     board_cards:  list  = []
     pot_size:     int   = 0
@@ -1172,9 +1174,10 @@ async def post_raw(data: RawData):
         payload["server_status"] = {"hands_logged": 0, "mem0_live": False, "claude_live": False}
 
     global _active_game_id
-    _active_game_id = data.game_id or data.session_id
-    _latest_state[data.session_id] = payload
-    await manager.broadcast(data.session_id, {"type": "raw", "data": payload})
+    route_key       = data.game_id or data.session_id
+    _active_game_id = route_key
+    _latest_state[route_key] = payload
+    await manager.broadcast(route_key, {"type": "raw", "data": payload})
     return {"ok": True}
 
 # ── GET /api/state/{session_id} — full state for dashboard on reconnect ────────

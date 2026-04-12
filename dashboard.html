@@ -26,8 +26,8 @@
   --purple:       #a78bfa;
   --purple-dim:   rgba(167,139,250,0.12);
   --text-1:       #e8f0f8;
-  --text-2:       #a8bdd0;
-  --text-3:       #7090aa;
+  --text-2:       #b8cfe0;
+  --text-3:       #8aadc8;
   --raise:        #00d4a4;
   --bet:          #4da6ff;
   --call:         #ffb020;
@@ -44,9 +44,11 @@ body {
   background: var(--bg-base);
   color: var(--text-1);
   font-family: var(--f-body);
-  font-size: 13px;
-  min-height: 100vh;
-  overflow-x: hidden;
+  font-size: 14px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── HEADER ── */
@@ -78,7 +80,7 @@ body {
   align-items: center;
   gap: 6px;
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size:13px;
   color: var(--accent);
   background: var(--accent-dim);
   border: 1px solid var(--accent-glow);
@@ -101,7 +103,7 @@ body {
 
 #session-info {
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size:13px;
   color: var(--text-3);
 }
 
@@ -114,7 +116,7 @@ body {
 
 .status-pill {
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size:13px;
   padding: 3px 10px;
   border-radius: 20px;
   display: flex;
@@ -148,7 +150,8 @@ body {
   grid-template-columns: 280px 1fr 260px;
   gap: 1px;
   background: var(--border);
-  min-height: calc(100vh - 48px);
+  height: calc(100vh - 48px - 200px);
+  min-height: 400px;
 }
 
 /* ── PANEL BASE ── */
@@ -160,7 +163,7 @@ body {
 
 .panel-label-small {
   font-family: var(--f-head);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 2px;
   color: var(--text-3);
@@ -226,7 +229,7 @@ body {
 #hero-turn-banner {
   display: none;
   font-family: var(--f-head);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 2px;
   text-align: center;
@@ -255,7 +258,7 @@ body {
   align-items: center;
   margin-bottom: 4px;
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 #bet-context-box .bc-label { color: var(--text-3); }
@@ -287,7 +290,7 @@ body {
 }
 
 .reason-item {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-2);
   line-height: 1.5;
   padding: 3px 0;
@@ -309,7 +312,7 @@ body {
 
 .stage-pill {
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size:13px;
   padding: 2px 8px;
   border-radius: 10px;
   background: var(--bg-panel-2);
@@ -331,7 +334,7 @@ body {
 
 .stat-chip {
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size:13px;
   color: var(--text-2);
   background: var(--bg-panel-2);
   border: 1px solid var(--border);
@@ -363,7 +366,7 @@ body {
 
 .card-label {
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size:13px;
   color: var(--text-3);
   width: 40px;
   flex-shrink: 0;
@@ -404,7 +407,7 @@ body {
   position: absolute;
   top: -6px;
   right: -6px;
-  font-size: 10px;
+  font-size:13px;
   color: var(--accent);
 }
 
@@ -439,7 +442,7 @@ body {
 }
 
 .pred-card .rank { font-size: 13px; line-height: 1; }
-.pred-card .suit { font-size: 10px; line-height: 1; }
+.pred-card .suit { font-size:13px; line-height: 1; }
 
 .pred-card.red   { color: #ff9999; border-color: rgba(255,153,153,0.3); background: rgba(255,153,153,0.05); }
 .pred-card.black { color: #c4b5fd; border-color: rgba(196,181,253,0.3); background: rgba(196,181,253,0.05); }
@@ -452,7 +455,7 @@ body {
 
 .next-label {
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size:13px;
   color: var(--text-3);
   margin-bottom: 8px;
 }
@@ -492,7 +495,7 @@ body {
   padding: 4px 10px;
   border-radius: 6px;
   font-family: var(--f-mono);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   border: 1px solid var(--border);
   background: var(--bg-panel-2);
@@ -512,12 +515,12 @@ body {
 }
 
 .carry-pct {
-  font-size:11px;
+  font-size:13px;
   opacity: 0.6;
 }
 
 .carry-flush-warn {
-  font-size: 11px;
+  font-size: 13px;
   color: #fb923c;
   padding: 6px 8px;
   background: rgba(251,146,60,0.1);
@@ -526,7 +529,7 @@ body {
 }
 
 .carry-hit-summary {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--danger);
   margin-top: 6px;
@@ -550,7 +553,7 @@ body {
 
 .hand-num {
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size:13px;
   color: var(--text-3);
   width: 30px;
   flex-shrink: 0;
@@ -558,7 +561,7 @@ body {
 
 .hand-result {
   font-family: var(--f-head);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 1px;
   width: 50px;
@@ -571,13 +574,13 @@ body {
 
 .hand-cards {
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-2);
   flex: 1;
 }
 
 .hand-note {
-  font-size: 10px;
+  font-size:13px;
   color: var(--warning);
   margin-top: 3px;
   line-height: 1.4;
@@ -594,30 +597,30 @@ body {
 
 .pname-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
 .player-name { font-family:var(--f-head); font-size:13px; font-weight:600; color:var(--text-1); }
-.player-tag { font-family:var(--f-mono); font-size:11px; padding:2px 6px; border-radius:10px; letter-spacing:1px; }
+.player-tag { font-family:var(--f-mono); font-size:13px; padding:2px 6px; border-radius:10px; letter-spacing:1px; }
 .player-tag.danger { background:var(--danger-dim); color:var(--danger); border:1px solid rgba(255,61,61,0.3); }
 .player-tag.feeder { background:var(--info-dim); color:var(--info); border:1px solid rgba(77,166,255,0.3); }
 
 .hud-big4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:3px; margin-bottom:4px; }
 .hud-stat { text-align:center; }
-.hud-val  { font-family:var(--f-mono); font-size:13px; font-weight:500; color:var(--text-1); }
+.hud-val  { font-family:var(--f-mono); font-size:15px; font-weight:500; color:var(--text-1); }
 .hud-val.danger { color:var(--danger); }
 .hud-val.warn   { color:var(--warning); }
 .hud-val.good   { color:var(--accent); }
-.hud-lbl { font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; }
+.hud-lbl { font-size:13px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; }
 
 .winrate-bar { height:2px; background:var(--border); border-radius:1px; margin:3px 0; overflow:hidden; }
 .winrate-fill { height:100%; border-radius:1px; transition:width .5s; }
 
-.hud-preflop { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; margin-bottom:4px; padding-top:4px; border-top:1px solid var(--border); font-family:var(--f-mono); font-size:11px; }
+.hud-preflop { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; margin-bottom:4px; padding-top:4px; border-top:1px solid var(--border); font-family:var(--f-mono); font-size:13px; }
 .hud-pf-stat { display:flex; flex-direction:column; align-items:center; }
-.hud-pf-val  { color:var(--text-2); font-size:10px; }
-.hud-pf-lbl  { color:var(--text-3); font-size:11px; }
+.hud-pf-val  { color:var(--text-2); font-size:13px; }
+.hud-pf-lbl  { color:var(--text-3); font-size:13px; }
 
 .player-bottom-row { display:flex; justify-content:space-between; align-items:center; margin-top:4px; }
-.player-sample { font-size:11px; color:var(--text-3); font-style:italic; font-family:var(--f-mono); }
+.player-sample { font-size:13px; color:var(--text-3); font-style:italic; font-family:var(--f-mono); }
 
-.claude-oval { font-family:var(--f-mono); font-size:11px; padding:2px 9px; border-radius:20px; background:var(--purple-dim); color:var(--purple); border:1px solid rgba(167,139,250,0.3); cursor:pointer; transition:all .2s; white-space:nowrap; }
+.claude-oval { font-family:var(--f-mono); font-size:13px; padding:2px 9px; border-radius:20px; background:var(--purple-dim); color:var(--purple); border:1px solid rgba(167,139,250,0.3); cursor:pointer; transition:all .2s; white-space:nowrap; }
 .claude-oval:hover { background:rgba(167,139,250,0.25); }
 .claude-oval.loading { opacity:0.5; cursor:wait; }
 
@@ -629,17 +632,17 @@ body {
 #modal-close { font-size:18px; color:var(--text-3); background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; }
 #modal-close:hover { color:var(--text-1); background:var(--bg-hover); }
 .modal-section { margin-bottom:14px; }
-.modal-section-title { font-family:var(--f-head); font-size:10px; letter-spacing:2px; color:var(--text-3); text-transform:uppercase; margin-bottom:7px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+.modal-section-title { font-family:var(--f-head); font-size:13px; letter-spacing:2px; color:var(--text-3); text-transform:uppercase; margin-bottom:7px; padding-bottom:4px; border-bottom:1px solid var(--border); }
 .modal-stats-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
 .modal-stat-box { background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; padding:8px; text-align:center; }
 .modal-stat-val { font-family:var(--f-mono); font-size:18px; font-weight:500; color:var(--text-1); }
 .modal-stat-val.danger { color:var(--danger); }
 .modal-stat-val.warn   { color:var(--warning); }
 .modal-stat-val.good   { color:var(--accent); }
-.modal-stat-lbl { font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; }
-.modal-profile-badge { display:inline-block; font-family:var(--f-mono); font-size:10px; padding:3px 12px; border-radius:20px; background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-glow); margin-bottom:10px; }
-#modal-narrative { font-size:12px; color:var(--warning); line-height:1.7; padding:12px; background:rgba(255,176,32,0.05); border:1px solid rgba(255,176,32,0.2); border-radius:6px; }
-#modal-narrative.loading { color:var(--text-3); font-style:italic; font-size:11px; background:var(--bg-panel-2); border-color:var(--border); }
+.modal-stat-lbl { font-size:13px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; }
+.modal-profile-badge { display:inline-block; font-family:var(--f-mono); font-size:13px; padding:3px 12px; border-radius:20px; background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-glow); margin-bottom:10px; }
+#modal-narrative { font-size:13px; color:var(--warning); line-height:1.7; padding:12px; background:rgba(255,176,32,0.05); border:1px solid rgba(255,176,32,0.2); border-radius:6px; }
+#modal-narrative.loading { color:var(--text-3); font-style:italic; font-size:13px; background:var(--bg-panel-2); border-color:var(--border); }
 
 /* ── BOTTOM ROW ── /* ── BOTTOM ROW ── */
 #bottom-row {
@@ -667,13 +670,13 @@ body {
 
 .narrative-meta {
   font-family: var(--f-mono);
-  font-size:11px;
+  font-size:13px;
   color: var(--text-3);
   margin-bottom: 3px;
 }
 
 .narrative-text {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--warning);
   line-height: 1.5;
 }
@@ -692,14 +695,14 @@ body {
 #upload-zone:hover { border-color: var(--accent); background: var(--accent-dim); }
 
 #upload-zone .uz-icon { font-size: 24px; margin-bottom: 6px; }
-#upload-zone .uz-text { font-size: 11px; color: var(--text-2); }
-#upload-zone .uz-sub  { font-size: 10px; color: var(--text-3); margin-top: 3px; }
+#upload-zone .uz-text { font-size: 13px; color: var(--text-2); }
+#upload-zone .uz-sub  { font-size:13px; color: var(--text-3); margin-top: 3px; }
 
 #upload-input { display: none; }
 
 #upload-status {
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--accent);
   min-height: 16px;
 }
@@ -707,7 +710,7 @@ body {
 .tool-btn {
   width: 100%;
   font-family: var(--f-head);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -731,7 +734,7 @@ body {
 
 /* Empty states */
 .empty-state {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
   text-align: center;
   padding: 20px;
@@ -749,7 +752,7 @@ body {
 }
 
 #waiting-state .ws-icon { font-size: 28px; opacity: 0.3; }
-#waiting-state .ws-text { font-size: 12px; color: var(--text-3); font-family: var(--f-mono); }
+#waiting-state .ws-text { font-size: 13px; color: var(--text-3); font-family: var(--f-mono); }
 
 /* Flush danger banner */
 #flush-banner {
@@ -758,7 +761,7 @@ body {
   border: 1px solid rgba(255,61,61,0.4);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--danger);
   font-weight: 500;
 }
@@ -840,7 +843,7 @@ body {
       </div>
       <div id="board-cards-row">
         <div class="card-label">BOARD</div>
-        <div id="board-cards"><span style="color:var(--text-3);font-family:var(--f-mono);font-size:11px">Preflop</span></div>
+        <div id="board-cards"><span style="color:var(--text-3);font-family:var(--f-mono);font-size:13px">Preflop</span></div>
       </div>
     </div>
 
@@ -905,7 +908,7 @@ body {
 
   <!-- Narrative Feed -->
   <div id="narrative-panel">
-    <div class="panel-label">Narrative Feed <span style="font-size:11px;color:var(--text-3)">(Mem0 + Claude · last 5 hands)</span></div>
+    <div class="panel-label">Narrative Feed <span style="font-size:13px;color:var(--text-3)">(Mem0 + Claude · last 5 hands)</span></div>
     <div id="narrative-list"><div class="empty-state">No narratives yet — play hands</div></div>
   </div>
 
@@ -951,7 +954,7 @@ let SESSION  = new URLSearchParams(window.location.search).get('session') || '';
 let GAME_ID  = new URLSearchParams(window.location.search).get('game_id') || '';
 
 async function initSession() {
-  // If session already in URL (opened via popup with params), use it
+  // If session already in URL, use it
   if (SESSION && SESSION !== 'unknown') {
     document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
     connectWS();
@@ -959,21 +962,32 @@ async function initSession() {
     loadNarratives();
     return;
   }
-  // Otherwise ask the server what game is active right now
-  try {
-    const r = await fetch(`${SERVER}/active`);
-    const d = await r.json();
-    if (d.ok && d.game_id) {
-      SESSION = d.game_id;
-      GAME_ID = d.game_id;
-      document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
+  // Ask server what game is active — retry up to 10 times (extension may not have sent /raw yet)
+  let attempts = 0;
+  const tryFetch = async () => {
+    attempts++;
+    try {
+      const r = await fetch(`${SERVER}/active`);
+      const d = await r.json();
+      if (d.ok && d.game_id) {
+        SESSION = d.game_id;
+        GAME_ID = d.game_id;
+        document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
+        connectWS();
+        loadInitialState();
+        loadNarratives();
+        return;
+      }
+    } catch(e) {}
+    // Not ready yet — retry
+    if (attempts < 10) {
+      setTimeout(tryFetch, 1000);
+    } else {
+      // Give up — connect anyway (will show WS error but won't hang forever)
+      connectWS();
     }
-  } catch(e) {
-    console.warn('[dashboard] /active failed:', e);
-  }
-  connectWS();
-  loadInitialState();
-  loadNarratives();
+  };
+  tryFetch();
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
@@ -1220,11 +1234,11 @@ function renderCards(d) {
 
   holeEl.innerHTML = holeCards.length
     ? holeCards.map(c => cardHTML(c, 'hole', false)).join('')
-    : '<span style="color:var(--text-3);font-family:var(--f-mono);font-size:11px">No cards</span>';
+    : '<span style="color:var(--text-3);font-family:var(--f-mono);font-size:13px">No cards</span>';
 
   boardEl.innerHTML = boardCards.length
     ? boardCards.map(c => cardHTML(c, 'board', false)).join('')
-    : '<span style="color:var(--text-3);font-family:var(--f-mono);font-size:11px">Preflop</span>';
+    : '<span style="color:var(--text-3);font-family:var(--f-mono);font-size:13px">Preflop</span>';
 }
 
 // ── PREDICTED CARDS ───────────────────────────────────────────────────────────
@@ -1479,12 +1493,12 @@ function renderNarratives() {
   el.innerHTML = state.narratives.slice(0,30).map(n => {
     const wu = n.weight_updates || {};
     const tags = [];
-    if (wu.carryBoost > 0)   tags.push(`<span style="color:var(--warning);font-size:11px">⚡ carry+${wu.carryBoost.toFixed(1)}</span>`);
-    if (wu.jeezyWarning)     tags.push(`<span style="color:var(--danger);font-size:11px">⚠ DANGER</span>`);
-    if (wu.allinWarning)     tags.push(`<span style="color:var(--danger);font-size:11px">🚨 ALL-IN</span>`);
-    if (wu.hotCards?.length) tags.push(`<span style="color:var(--accent);font-size:11px">🔥 ${wu.hotCards.join(' ')}</span>`);
+    if (wu.carryBoost > 0)   tags.push(`<span style="color:var(--warning);font-size:13px">⚡ carry+${wu.carryBoost.toFixed(1)}</span>`);
+    if (wu.jeezyWarning)     tags.push(`<span style="color:var(--danger);font-size:13px">⚠ DANGER</span>`);
+    if (wu.allinWarning)     tags.push(`<span style="color:var(--danger);font-size:13px">🚨 ALL-IN</span>`);
+    if (wu.hotCards?.length) tags.push(`<span style="color:var(--accent);font-size:13px">🔥 ${wu.hotCards.join(' ')}</span>`);
     const statsLine = (n.live_wr || n.carry_rate)
-      ? `<div style="font-size:11px;color:var(--text-3);margin-top:2px">WR: ${n.live_wr||'—'}% · Carry: ${n.carry_rate||'—'}%</div>`
+      ? `<div style="font-size:13px;color:var(--text-3);margin-top:2px">WR: ${n.live_wr||'—'}% · Carry: ${n.carry_rate||'—'}%</div>`
       : '';
     return `<div class="narrative-entry">
       <div class="narrative-meta">Hand #${n.hand_num||'?'} · ${n.ts||''} ${tags.join(' ')}</div>
@@ -1511,7 +1525,7 @@ function renderKnowledge() {
   // ── Active model patch ────────────────────────────────────────────────────
   html += `<div class="modal-section">
     <div class="modal-section-title">Active Model Patch</div>
-    <div style="font-family:var(--f-mono);font-size:10px">
+    <div style="font-family:var(--f-mono);font-size:13px">
       <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
         <span style="color:var(--text-3)">carryBoost</span>
         <span style="color:${(patch.carryBoost||0)>0?'var(--warning)':'var(--text-3)'}">${patch.carryBoost||0}</span>
@@ -1534,7 +1548,7 @@ function renderKnowledge() {
   // ── What Letta knows ──────────────────────────────────────────────────────
   html += `<div class="modal-section">
     <div class="modal-section-title">What Letta Knows</div>
-    <div style="font-family:var(--f-mono);font-size:10px">
+    <div style="font-family:var(--f-mono);font-size:13px">
       <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
         <span style="color:var(--text-3)">Letta status</span>
         <span style="color:var(--warning)">Claude fallback</span>
@@ -1566,15 +1580,15 @@ function renderKnowledge() {
   if (wu.next_hand) {
     html += `<div class="modal-section">
       <div class="modal-section-title">Last Letta Note</div>
-      <div style="font-size:11px;color:var(--warning);line-height:1.6;padding:8px;background:rgba(255,176,32,0.05);border:1px solid rgba(255,176,32,0.15);border-radius:5px">${wu.next_hand}</div>
-      <div style="font-size:11px;color:var(--text-3);margin-top:4px;font-family:var(--f-mono)">Hand #${wu.hand_num||'?'}</div>
+      <div style="font-size:13px;color:var(--warning);line-height:1.6;padding:8px;background:rgba(255,176,32,0.05);border:1px solid rgba(255,176,32,0.15);border-radius:5px">${wu.next_hand}</div>
+      <div style="font-size:13px;color:var(--text-3);margin-top:4px;font-family:var(--f-mono)">Hand #${wu.hand_num||'?'}</div>
     </div>`;
   }
 
   // ── Learning loop diagram ─────────────────────────────────────────────────
   html += `<div class="modal-section">
     <div class="modal-section-title">Learning Loop</div>
-    <div style="font-size:10px;color:var(--text-3);line-height:2;font-family:var(--f-mono)">
+    <div style="font-size:13px;color:var(--text-3);line-height:2;font-family:var(--f-mono)">
       <div><span style="color:var(--accent)">DOM</span> → Extension → /raw → Dashboard</div>
       <div><span style="color:var(--accent)">Hand ends</span> → /hand → Mem0 store</div>
       <div><span style="color:var(--accent)">LangGraph</span> → Mem0 retrieve → Letta</div>
