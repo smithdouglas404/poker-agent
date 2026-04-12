@@ -1328,11 +1328,12 @@ async function initSession() {
       if (d.ok && d.game_id) {
         SESSION = d.game_id;
         GAME_ID = d.game_id;
-        if (d.extension_id) window._EXT_ID = d.extension_id;
         document.getElementById('session-info').textContent = 'GAME ' + SESSION.slice(0,20);
         connectWS();
         loadInitialState();
         loadNarratives();
+        setTimeout(loadPlayerStats, 2000);
+        setTimeout(loadMem0, 3000);  // load Mem0 entries after connect
         return;
       }
     } catch(e) {}
@@ -1361,9 +1362,7 @@ let ws = null;
 let wsRetry = 0;
 
 function connectWS() {
-  const wsUrl    = window._WS_URL   || WS_URL;
-  const session  = window._SESSION  || SESSION;
-  const url = `${wsUrl}/ws/${session}`;
+  const url = `${WS_URL}/ws/${SESSION}`;
   try {
     ws = new WebSocket(url);
   } catch(e) {
@@ -1384,16 +1383,10 @@ function connectWS() {
         state.raw = msg.data;
         renderAll();
 
+      } else if (msg.type === 'player_narrative') {
+          handlePlayerNarrative(msg.data || msg);
       } else if (msg.type === 'weight_updates') {
-          // Forward weight_updates to extension for chrome.storage persistence
-          if (window._EXT_ID && msg.data && msg.data.weight_updates) {
-            try {
-              chrome.runtime.sendMessage(window._EXT_ID, {
-                type: 'WEIGHT_UPDATE',
-                weights: msg.data.weight_updates
-              });
-            } catch(e) {}
-          }
+          // weight_updates applied in-memory only — server is source of truth
         // Letta/Claude returned weight_updates — patch onto local model
         // These affect next hand's getAdvice() decisions:
         // carryBoost → boosts carry signal
@@ -2035,22 +2028,7 @@ document.getElementById('upload-input').addEventListener('change', async e => {
       stat.textContent = `✓ ${data.hands} hands stored → DB`;
       stat.style.color = 'var(--green)';
 
-      // Send model JSON directly to extension background.js via chrome.runtime.sendMessage
-      // Extension background.js stores it in chrome.storage as 'pnModel'
-      if (data.model && data.model.totalHands > 0 && window._EXT_ID) {
-        try {
-          chrome.runtime.sendMessage(window._EXT_ID,
-            { type: 'MODEL_UPDATE', model: data.model },
-            (resp) => {
-              if (resp && resp.ok) {
-                console.log('[dashboard] Model sent to extension:', resp.hands, 'hands');
-              }
-            }
-          );
-        } catch(e) {
-          console.warn('[dashboard] Could not send model to extension:', e);
-        }
-      }
+      // Model lives on server — extension fetches via GET /model/{game_id}
 
       setTimeout(() => {
         stat.textContent = '⚡ LangGraph analyzing patterns…';
@@ -2074,11 +2052,62 @@ document.getElementById('upload-input').addEventListener('change', async e => {
 
 // ── RECEIVE GAME ID FROM EXTENSION ───────────────────────────────────────────
 
+// ── PLAYER STATS FROM DB ─────────────────────────────────────────────────────
+async function loadPlayerStats() {
+  if (!SESSION) return;
+  try {
+    const r = await fetch(SERVER + '/player_stats/' + SESSION);
+    const d = await r.json();
+    if (d.ok && d.players && d.players.length) {
+      // Merge DB stats into state — DB stats win over session-only DOM stats
+      d.players.forEach(p => {
+        // Normalize DB field names to match what HUD rendering expects
+        const normalized = {
+          ...state.playerStats[p.player_name],   // keep live session data
+          // DB computed percentages — map to HUD field names
+          vpip:           p.vpip_pct       || p.vpip       || 0,
+          pfr:            p.pfr_pct        || p.pfr        || 0,
+          threeBet:       p.threebet_pct   || p.threeBet   || 0,
+          winRate:        p.win_pct        || p.winRate    || 0,
+          af:             p.af             || 0,
+          wtsd:           p.wtsd_pct       || p.wtsd       || 0,
+          wsd:            p.wsd_pct        || p.wsd        || 0,
+          ats:            p.ats_pct        || p.ats        || 0,
+          fold_to_3b_pct: p.fold_to_3b_pct || 0,
+          cbet_pct:       p.cbet_pct       || 0,
+          fold_to_cbet_pct: p.fold_to_cbet_pct || 0,
+          handsTracked:   p.hands_seen     || 0,
+          isDanger:       p.isDanger       || false,
+          isFeeder:       p.isFeeder       || false,
+          commentary:     p.commentary     || state.playerStats[p.player_name]?.commentary || '',
+          player_name:    p.player_name,
+          fromDB:         true,
+        };
+        state.playerStats[p.player_name] = normalized;
+      });
+      renderPlayerHub(state.raw || {});
+      console.log('[dashboard] Player stats loaded from DB:', d.players.length, 'players');
+    }
+  } catch(e) {}
+}
+
+// Handle auto-generated narratives from server
+function handlePlayerNarrative(msg) {
+  const { player, narrative } = msg;
+  if (!player || !narrative) return;
+  if (state.playerStats[player]) {
+    state.playerStats[player].commentary = narrative;
+    renderPlayerHub(state.raw || {});
+  }
+}
+
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 // initSession() fetches /active from server to get game ID, then connects WS
 initSession();
 renderKnowledge();
 setInterval(loadNarratives, 5000);
 setInterval(renderKnowledge, 10000);
+setInterval(loadPlayerStats, 15000);
+setInterval(loadMem0, 30000);  // refresh Mem0 every 30s
 </script>
 </html>
