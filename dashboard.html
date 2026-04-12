@@ -1132,6 +1132,7 @@ body::after {
       <div id="bet-context-box">
         <div class="bc-row"><span class="bc-label">AGGRESSOR</span><span class="bc-val" id="bc-aggressor">—</span></div>
         <div class="bc-row"><span class="bc-label">THEIR BET</span><span class="bc-val" id="bc-their-bet">—</span></div>
+        <div class="bc-row"><span class="bc-label">YOUR BET</span><span class="bc-val" id="bc-your-bet">—</span></div>
         <div class="bc-row"><span class="bc-label">CALL COSTS</span><span class="bc-val highlight" id="bc-call">—</span></div>
         <div class="bc-row"><span class="bc-label">POT SIZE</span><span class="bc-val" id="bc-pot">—</span></div>
         <div class="bc-row"><span class="bc-label">EQUITY NEEDED</span><span class="bc-val highlight" id="bc-equity">—</span></div>
@@ -1514,11 +1515,6 @@ function renderDecision(d) {
 
   if (!dec || !dec.action) return;
 
-  const box   = document.getElementById('action-display');
-  const emoji = document.getElementById('action-emoji');
-  const text  = document.getElementById('action-text');
-  const sizing = document.getElementById('action-sizing');
-
   const vc = (dec.vClass || 'check').toLowerCase();
   box.className = vc;
   emoji.textContent = dec.emoji || '';
@@ -1767,7 +1763,7 @@ function openPlayerModal(playerName) {
   const s = state.playerStats[playerName];
   if (!s) return;
 
-  document.getElementById('modal-p-name').textContent = playerName;
+  document.getElementById('modal-player-name').textContent = playerName;
   document.getElementById('player-modal').classList.add('open');
 
   // Profile label
@@ -1929,8 +1925,9 @@ function renderKnowledge() {
 
   el.innerHTML = html || '<div class="empty-state" style="padding:10px"><div class="empty-text">Waiting for first hand…</div></div>';
   return;
+}
 
-
+// ── MEM0 PANEL ────────────────────────────────────────────────────────────────
 function renderMem0(entries) {
   const el = document.getElementById('mem0-list');
   if (!entries || !entries.length) {

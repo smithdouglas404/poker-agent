@@ -131,7 +131,7 @@ Always base analysis on actual data only."""
 async def _auto_narrative(game_id: str, player_name: str):
     """Auto-generate Claude narrative for a player at milestone hand counts."""
     try:
-        req = type('R', (), {'game_id': game_id, 'player_name': player_name})()
+        req = NarrativeRequest(game_id=game_id, player_name=player_name)
         result = await player_narrative(req)
         if result.get("ok"):
             await manager.broadcast(game_id, {
@@ -1258,20 +1258,23 @@ async def all_memories(game_id: str = ""):
 # ── GET /proof/{session_id} ───────────────────────────────────────────────────
 @app.get("/proof/{session_id}")
 async def proof(session_id: str):
-    with get_db() as db:
-        mem0_entries = db.execute(
-            "SELECT hand_num,memory_text,memory_id,ts FROM mem0_log "
-            "WHERE game_id=? ORDER BY ts DESC LIMIT 50", (session_id,)
-        ).fetchall()
-        claude_entries = db.execute(
-            "SELECT hand_num,response,next_hand,ts,weight_updates,carry_rate,live_wr FROM claude_log "
-            "WHERE game_id=? ORDER BY ts DESC LIMIT 20", (session_id,)
-        ).fetchall()
-    return {
-        "session_id":    session_id,
-        "mem0_entries":  [dict(r) for r in mem0_entries],
-        "claude_entries": [dict(r) for r in claude_entries],
-    }
+    try:
+        with get_db() as db:
+            mem0_entries = db.execute(
+                "SELECT hand_num,memory_text,memory_id,ts FROM mem0_log "
+                "WHERE game_id=? ORDER BY ts DESC LIMIT 50", (session_id,)
+            ).fetchall()
+            claude_entries = db.execute(
+                "SELECT hand_num,response,next_hand,ts,weight_updates,carry_rate,live_wr FROM claude_log "
+                "WHERE game_id=? ORDER BY ts DESC LIMIT 20", (session_id,)
+            ).fetchall()
+        return {
+            "session_id":    session_id,
+            "mem0_entries":  [dict(r) for r in mem0_entries],
+            "claude_entries": [dict(r) for r in claude_entries],
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 # ── GET /health ───────────────────────────────────────────────────────────────
 @app.get("/health")
@@ -1528,7 +1531,10 @@ async def post_raw(data: RawData):
 @app.get("/active")
 async def get_active():
     """Dashboard calls this on load to get the current game ID — no URL params needed."""
-    return {"game_id": _active_game_id, "ok": bool(_active_game_id)}
+    try:
+        return {"game_id": _active_game_id, "ok": bool(_active_game_id)}
+    except Exception as e:
+        return {"game_id": "", "ok": False, "error": str(e)}
 
 @app.get("/model/{game_id}")
 async def get_model(game_id: str):
@@ -1589,10 +1595,13 @@ async def get_state(session_id: str):
 # ── GET /dashboard — serves the dashboard HTML ─────────────────────────────────
 @app.get("/dashboard")
 async def dashboard():
-    html_path = Path(__file__).parent / "dashboard.html"
-    if html_path.exists():
-        return HTMLResponse(content=html_path.read_text())
-    return HTMLResponse(content="<h1>Dashboard not found. Deploy dashboard.html alongside server.py</h1>", status_code=404)
+    try:
+        html_path = Path(__file__).parent / "dashboard.html"
+        if html_path.exists():
+            return HTMLResponse(content=html_path.read_text())
+        return HTMLResponse(content="<h1>Dashboard not found</h1>", status_code=404)
+    except Exception as e:
+        return HTMLResponse(content=f"<h1>Error: {e}</h1>", status_code=500)
 
 # ── POST /upload_csv — parse CSV from dashboard ───────────────────────────────
 from fastapi import Request as FastAPIRequest
