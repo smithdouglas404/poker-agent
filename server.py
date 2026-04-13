@@ -108,7 +108,7 @@ app.add_middleware(
 MEM0_API_KEY  = os.environ.get("MEM0_API_KEY", "")
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 LETTA_API_KEY = os.environ.get("LETTA_API_KEY", "")
-DB_PATH       = "hands.db"
+DB_PATH       = os.getenv("DB_PATH", "poker.db")
 # USER_ID is now the game_id — each game has its own isolated Mem0 namespace.
 # No global USER_ID. Pass game_id wherever Mem0 is called.
 
@@ -1372,6 +1372,25 @@ async def proof(session_id: str):
         return {"ok": False, "error": str(e)}
 
 # ── GET /health ───────────────────────────────────────────────────────────────
+@app.get("/debug/volume")
+async def debug_volume():
+    try:
+        import os
+        data_exists = os.path.exists("/data")
+        data_contents = os.listdir("/data") if data_exists else []
+        db_exists = os.path.exists(DB_PATH)
+        return {
+            "DB_PATH": DB_PATH,
+            "data_dir_exists": data_exists,
+            "data_dir_contents": data_contents,
+            "db_file_exists": db_exists,
+            "cwd": os.getcwd(),
+            "RAILWAY_VOLUME_MOUNT_PATH": os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "NOT SET"),
+            "RAILWAY_VOLUME_NAME": os.getenv("RAILWAY_VOLUME_NAME", "NOT SET"),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/health")
 async def health():
     mem0_preview   = MEM0_API_KEY[:8]  + "…" if MEM0_API_KEY  else "NOT SET"
@@ -1404,7 +1423,7 @@ async def health():
         "mem0_key": mem0_preview, "claude_key": claude_preview,
         "mem0_live": mem0_live,   "claude_live": claude_live,
         "mem0_error": mem0_error, "claude_error": claude_error,
-        "db": "hands.db",
+        "db": DB_PATH,
         "hands_logged": hand_count,
         "mem0_memories_logged": mem0_log_count,
         "analysis_runs": analysis_count
