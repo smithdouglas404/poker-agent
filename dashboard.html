@@ -70,7 +70,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .turn-pulse{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1s infinite}
 #tilt-banner{display:none;align-items:center;justify-content:center;gap:6px;padding:5px 12px;background:rgba(255,85,85,0.08);border-bottom:1px solid rgba(255,85,85,0.2);font-size:13px;font-weight:700;letter-spacing:1px;color:#ff9b9b}
 #tilt-banner.show{display:flex}
-#action-display{padding:14px 12px 10px;border-bottom:1px solid var(--border);text-align:center;display:none}
+#action-display{padding:14px 12px 10px;border-bottom:1px solid var(--border);text-align:center}
 #action-emoji{font-size:20px;margin-bottom:5px;display:block}
 #action-text{font-size:36px;font-weight:700;line-height:1;margin-bottom:2px;transition:color 0.3s}
 #decision-panel.your-turn #action-text{animation:snapIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards}
@@ -94,14 +94,14 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 .bc-val{color:var(--t1);font-family:var(--f-mono)}.bc-val.highlight{color:var(--warning)}
 #equity-bar-wrap{height:3px;background:var(--border-md);border-radius:1px;margin-top:6px;overflow:hidden}
 #pot-odds-fill{height:100%;border-radius:1px;background:var(--green);transition:width 0.5s;width:0%}
-#reasons-list{padding:8px 12px;border-bottom:1px solid var(--border);display:none;flex-direction:column;gap:4px}
+#reasons-list{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
 .reason-item{display:flex;align-items:flex-start;gap:6px;font-size:13px;color:var(--t2);line-height:1.4}
 .reason-item::before{content:'▸';color:var(--green);flex-shrink:0;font-size:13px;margin-top:2px}
 .reason-item.danger{color:#ff9b9b}.reason-item.danger::before{color:var(--red)}
-#stage-bar{padding:6px 12px;display:none;gap:3px;border-bottom:1px solid var(--border)}
+#stage-bar{padding:6px 12px;display:flex;gap:3px;border-bottom:1px solid var(--border)}
 .stage-pill{padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:0.5px;color:var(--t4);background:var(--bg-card);border:1px solid var(--border);transition:all 0.2s}
 .stage-pill.active{background:rgba(0,212,164,0.1);border-color:rgba(0,212,164,0.3);color:var(--green)}
-#stats-bar{padding:5px 12px;display:none;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+#stats-bar{padding:5px 12px;display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
 .stat-chip{padding:2px 7px;border-radius:4px;font-family:var(--f-mono);font-size:13px;color:var(--t3);background:var(--bg-card);border:1px solid var(--border)}
 .stat-chip span{color:var(--t1);font-weight:700}
 #flush-banner{padding:5px 10px;border-radius:5px;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(88,166,255,0.25);margin-bottom:6px;display:none}
@@ -810,6 +810,10 @@ function predCardHTML(cardStr, connecting, carryPct) {
 
 // ── RENDER ALL ─────────────────────────────────────────────────────────────────
 function renderAll() {
+  // Update hand count pill from model_meta
+  const th = state.raw?.model_meta?.total_hands || 0;
+  if (th > 0) setStatus('hands-status', th + ' HANDS', 'ok');
+
   const d = state.raw;
   if (!d) return;
   renderDecision(d); renderCards(d); renderCarryAlert(d);
