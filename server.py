@@ -1372,24 +1372,6 @@ async def proof(session_id: str):
         return {"ok": False, "error": str(e)}
 
 # ── GET /health ───────────────────────────────────────────────────────────────
-@app.get("/debug/volume")
-async def debug_volume():
-    try:
-        import os
-        data_exists = os.path.exists("/data")
-        data_contents = os.listdir("/data") if data_exists else []
-        db_exists = os.path.exists(DB_PATH)
-        return {
-            "DB_PATH": DB_PATH,
-            "data_dir_exists": data_exists,
-            "data_dir_contents": data_contents,
-            "db_file_exists": db_exists,
-            "cwd": os.getcwd(),
-            "RAILWAY_VOLUME_MOUNT_PATH": os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "NOT SET"),
-            "RAILWAY_VOLUME_NAME": os.getenv("RAILWAY_VOLUME_NAME", "NOT SET"),
-        }
-    except Exception as e:
-        return {"error": str(e)}
 
 @app.get("/health")
 async def health():
@@ -1871,7 +1853,7 @@ async def upload_csv(request: FastAPIRequest, game_id: str = ""):
                 board = h["flop"] + h["turn"] + h["river"]
                 try:
                     db.execute(
-                        """INSERT OR REPLACE INTO hands
+                        """INSERT OR IGNORE INTO hands
                         (game_id, session_id, hand_num, hole_cards, board, player_count)
                         VALUES (?,?,?,?,?,?)""",
                         (target_game_id, target_game_id,
@@ -1920,8 +1902,7 @@ async def upload_csv(request: FastAPIRequest, game_id: str = ""):
             except asyncio.QueueFull:
                 print("[queue] Full — skipping LangGraph for upload")
 
-        parsed_count = len([h for h in hands if h["hole_cards"]])
-        return {"ok": True, "hands": stored, "parsed": parsed_count, "total_parsed": len(hands), "game_id": target_game_id, "model": model_json}
+        return {"ok": True, "hands": stored, "game_id": target_game_id, "model": model_json}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 

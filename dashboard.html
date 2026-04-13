@@ -834,19 +834,10 @@ function renderDecision(d) {
   const statsBar = document.getElementById('stats-bar');
 
   if (!dec || !dec.action) {
-    // No action yet — show action-display faded, hide details
-    box.style.display = '';
-    box.style.opacity = '0.3';
-    if (reasonsList) reasonsList.style.display = 'none';
-    if (stageBar) stageBar.style.display = 'none';
-    if (statsBar) statsBar.style.display = 'none';
+    box.style.opacity = '0.35';
     return;
   }
   box.style.opacity = '1';
-  box.style.display = '';
-  if (reasonsList) reasonsList.style.display = 'flex';
-  if (stageBar) stageBar.style.display = 'flex';
-  if (statsBar) statsBar.style.display = 'flex';
 
   const vc = (dec.vClass || 'check').toLowerCase();
   box.className = vc;
