@@ -1815,13 +1815,33 @@ async def upload_csv(request: FastAPIRequest, game_id: str = ""):
         lines = text.strip().split("\n")
         hands, cur = [], None
         card_re = re.compile(r'(?:10|[2-9JQKA])[♠♥♦♣]')
+        # First pass — collect hole cards keyed by order number
+        # CSV format: "entry",2026-...,ORDER_NUMBER
+        order_re = re.compile(r'^"?(.*?)"?,\d{4}-\d{2}-\d{2}T[^,]+,(\d+)')
+        hole_by_order = {}
+        for line in lines[1:]:
+            if "Your hand is" not in line: continue
+            m2 = order_re.match(line)
+            if m2:
+                cards = card_re.findall(m2.group(1).replace('""','"'))
+                if cards: hole_by_order[int(m2.group(2))] = cards
+        # Second pass — parse hands, attach nearest hole cards
         for line in lines[1:]:
             m = re.match(r'^"?(.*?)"?,(\d{4}-\d{2}-\d{2}T[^,]+),(\d+)', line)
             if not m: continue
             entry = m.group(1).replace('""', '"')
             if "-- starting hand" in entry:
                 hm = re.search(r"starting hand #(\d+)", entry)
-                if hm: cur = {"hand_num": int(hm.group(1)), "hole_cards": [], "flop": [], "turn": [], "river": [], "players": set()}
+                if hm:
+                    hand_order = int(m.group(3))
+                    # Find hole cards within 20 order numbers of hand start
+                    # (PokerNow assigns hole card order slightly above hand start order)
+                    hole = []
+                    for ho, cards in hole_by_order.items():
+                        if 0 <= ho - hand_order <= 20:
+                            hole = cards
+                            break
+                    cur = {"hand_num": int(hm.group(1)), "hole_cards": hole, "flop": [], "turn": [], "river": [], "players": set()}
             elif "-- ending hand" in entry:
                 if cur:
                     cur["player_count"] = len(cur["players"])
@@ -1851,7 +1871,7 @@ async def upload_csv(request: FastAPIRequest, game_id: str = ""):
                 board = h["flop"] + h["turn"] + h["river"]
                 try:
                     db.execute(
-                        """INSERT OR IGNORE INTO hands
+                        """INSERT OR REPLACE INTO hands
                         (game_id, session_id, hand_num, hole_cards, board, player_count)
                         VALUES (?,?,?,?,?,?)""",
                         (target_game_id, target_game_id,
@@ -1900,7 +1920,8 @@ async def upload_csv(request: FastAPIRequest, game_id: str = ""):
             except asyncio.QueueFull:
                 print("[queue] Full — skipping LangGraph for upload")
 
-        return {"ok": True, "hands": stored, "game_id": target_game_id, "model": model_json}
+        parsed_count = len([h for h in hands if h["hole_cards"]])
+        return {"ok": True, "hands": stored, "parsed": parsed_count, "total_parsed": len(hands), "game_id": target_game_id, "model": model_json}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
