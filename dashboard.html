@@ -108,7 +108,8 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
 #flush-banner.active{display:block}
 #table-dynamic-wrap{padding:5px 12px;border-bottom:1px solid var(--border);color:var(--t2);display:none}
 
-.ws-icon{font-size:28px;opacity:0.15}.ws-label{font-size:18px;font-weight:700;letter-spacing:2px;color:var(--t4)}.ws-sub{color:var(--t4);text-align:center}
+#waiting-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;gap:8px;flex:1}
+.ws-icon{font-size:28px;opacity:0.15}.ws-label{font-size:18px;font-weight:700;letter-spacing:3px;color:var(--t4)}.ws-sub{color:var(--t4);text-align:center}
 
 /* SECTION LABEL */
 .sec-label{font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t1);padding:8px 12px 6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
@@ -410,6 +411,11 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
           <span id="table-dynamic"></span>
         </div>
 
+        <div id="waiting-state">
+          <div class="ws-icon">🃏</div>
+          <div class="ws-label">WAITING</div>
+          <div class="ws-sub">Play a hand to begin</div>
+        </div>
       </div>
 
       <div class="panel" id="center-panel">
@@ -833,11 +839,9 @@ function renderDecision(d) {
   const stageBar = document.getElementById('stage-bar');
   const statsBar = document.getElementById('stats-bar');
 
-  if (!dec || !dec.action) {
-    box.style.opacity = '0.35';
-    return;
-  }
-  box.style.opacity = '1';
+  const ws = document.getElementById('waiting-state');
+  if (ws) ws.style.display = 'none';
+  if (!dec || !dec.action) return;
 
   const vc = (dec.vClass || 'check').toLowerCase();
   box.className = vc;
