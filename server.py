@@ -230,7 +230,7 @@ manager = ConnectionManager()
 _latest_state:   Dict[str, dict] = {}
 _active_game_id: str  = ""   # most recently active game
 _model_cache:    dict = {}   # game_id → {model, version, hand_count}
-MODEL_REBUILD_EVERY = 5      # rebuild model every N new hands
+MODEL_REBUILD_EVERY = 1      # rebuild every hand — model.hands=[] so no perf cost
 
 # ── LangGraph — Between-Hands Workflow ───────────────────────────────────────
 # Replaces the manual _run_between_hands prompt engineering.
@@ -808,17 +808,13 @@ ALL_CARDS = [r+s for r in RANKS for s in SUITS]
 EARLY_POS = {'hole_1','hole_2','flop_1','flop_2','flop_3'}
 
 def build_model_from_db(game_id: str) -> dict:
-    """
-    Build the poker model from ALL hands across ALL games in SQLite.
-    PokerNow's shuffle bias is platform-wide — every game contributes signal.
-    The more total hands we have, the better the carry predictions.
-    game_id is kept for logging only.
-    """
+    """Build the poker model from THIS game's hands only. Each game is independent."""
     try:
         with get_db() as db:
             rows = db.execute(
                 "SELECT hole_cards, board, player_count FROM hands "
-                "WHERE hole_cards IS NOT NULL ORDER BY id ASC"
+                "WHERE game_id=? AND hole_cards IS NOT NULL ORDER BY id ASC",
+                (game_id,)
             ).fetchall()
     except Exception as e:
         print(f"[model] DB error: {e}")
@@ -881,8 +877,13 @@ def build_model_from_db(game_id: str) -> dict:
         t = sum(pos_freq[c].values()) or 1
         early_bias[c] = e / t
 
+    # topCards formula matches model.js — earlyBias ratio + raw count tiebreaker + carry heat
+    def _tc_score(c):
+        e = sum(pos_freq[c].get(p,0) for p in EARLY_POS)
+        t = sum(pos_freq[c].values()) or 1
+        return (e/t) + e*0.001 + (carry_hot.get(c,0)*0.0001)
     top_cards  = sorted([c for c in ALL_CARDS if sum(pos_freq[c].values()) > 2],
-                        key=lambda c: early_bias[c], reverse=True)[:15]
+                        key=_tc_score, reverse=True)[:15]
     carry_rate = round(carry_pairs / carry_total * 100) if carry_total else 0
 
     # ── Segment by player count (3-4, 5-6, 7+) ────────────────────────────────
@@ -938,7 +939,7 @@ def build_model_from_db(game_id: str) -> dict:
             "medium": {"count": len(medium_table), "carryRate": segment_carry(medium_table)},
             "large":  {"count": len(large_table),  "carryRate": segment_carry(large_table)},
         },
-        "hands": []  # not serialized — too large
+        "hands": []  # carry chain uses current session hands only — not cross-session
     }
 
 def maybe_rebuild_model(game_id: str, hand_count: int) -> dict:
@@ -996,7 +997,12 @@ class HandData(BaseModel):
     away_mode:       bool = False
     pot:             int  = 0
     shown_hands:     dict = {}
+    shown_winners:   list = []
+    win_counts:      dict = {}
+    dealer_pos:      int  = 0
+    blinds:          dict = {}
     winner:          str  = ""
+    decision:        dict = {}   # engine decision for this hand — stored as engine_action
     players_in_hand: list = []   # full per-player HUD data for this hand
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1677,6 +1683,10 @@ class RawData(BaseModel):
     player_stats: dict  = {}
     danger_players: list = []
     model_meta:   dict  = {}
+    model_ready:  bool  = False
+    all_players_snap: dict = {}
+    board_stage:  str   = ""
+    extension_id: str   = ""
 
 @app.post("/raw")
 async def post_raw(data: RawData):
@@ -1717,11 +1727,11 @@ async def get_model(game_id: str):
     """Extension fetches current model on startup — no chrome.storage needed."""
     try:
         with get_db() as db:
-            hand_count = db.execute(
+            game_count = db.execute(
                 "SELECT COUNT(*) FROM hands WHERE game_id=?", (game_id,)
             ).fetchone()[0]
-        model = await asyncio.to_thread(maybe_rebuild_model, game_id, hand_count)
-        return {"ok": bool(model), "model": model, "hand_count": hand_count}
+        model = await asyncio.to_thread(maybe_rebuild_model, game_id, game_count)
+        return {"ok": bool(model), "model": model, "hand_count": game_count}
     except Exception as e:
         return {"ok": False, "error": str(e), "model": {}}
 
@@ -1901,6 +1911,32 @@ async def upload_csv(request: FastAPIRequest, game_id: str = ""):
                 })
             except asyncio.QueueFull:
                 print("[queue] Full — skipping LangGraph for upload")
+
+        # Broadcast new model to extension via WebSocket — so it uses fresh model immediately
+        if model_json and target_game_id:
+            await manager.broadcast(target_game_id, {
+                "type": "raw",
+                "data": {
+                    "model_ready": True,
+                    "model_meta": {
+                        "carry_rate":  model_json.get("carryRate", 0),
+                        "total_hands": model_json.get("totalHands", 0),
+                        "top_cards":   model_json.get("topCards", [])[:5],
+                    },
+                    "decision": {},
+                }
+            })
+            # Also send model_seed so extension fetchModel picks it up
+            await manager.broadcast(target_game_id, {
+                "type": "model_seed",
+                "data": {
+                    "model":           model_json,
+                    "hand_count":      stored,
+                    "game_hand_count": stored,
+                    "game_id":         target_game_id,
+                    "player_stats":    {},
+                }
+            })
 
         return {"ok": True, "hands": stored, "game_id": target_game_id, "model": model_json}
     except Exception as e:

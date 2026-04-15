@@ -380,6 +380,7 @@ html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--t1);font
             <div id="confidence-label">CONFIDENCE <span id="confidence-pct">—</span></div>
             <div id="confidence-track"><div id="confidence-fill"></div></div>
           </div>
+          <div style="margin-top:6px;font-family:var(--f-mono);font-size:11px;color:var(--t3)">POSITION: <span id="position" style="color:var(--green);font-weight:700;display:none"></span><span id="position-none" style="color:var(--t4)">—</span></div>
           <div id="equity-row">
             <span class="eq-lbl">EQUITY EST</span>
             <span class="eq-val" id="equity-est">—%</span>
@@ -744,6 +745,14 @@ function connectWS() {
           if (state.narratives.length > 50) state.narratives.pop();
           renderNarratives(); renderKnowledge();
         }
+        // Tilt check on every completed hand (weight_updates fires once per hand)
+        if (wu.hand_num) {
+          const snap = state.raw?.all_players_snap || {};
+          const heroSnap = Object.values(snap).find(p => p.isHero);
+          const heroWon = heroSnap?.winner || heroSnap?.prize > 0 || window._heroWonThisHand;
+          checkTilt(heroWon ? 'WON' : 'LOST');
+          window._heroWonThisHand = false;
+        }
         updatePotOddsFromRaw();
       } else if (msg.type === 'model_seed') {
         // Server sending stored model + player stats from DB on connect
@@ -841,32 +850,28 @@ function renderDecision(d) {
 
   const ws = document.getElementById('waiting-state');
   if (ws) ws.style.display = 'none';
-  // WATCHING = folded, board still running — show carry/board but grey action box
+  // WATCHING = folded, board still running — update stage pills silently only
+  // Keep last real decision in the action box — do NOT overwrite with FOLDED
   if (dec && dec.watching) {
-    text.textContent = 'FOLDED';
-    text.className = 'action-wait';
-    emoji.textContent = '👁';
-    sizing.textContent = 'Watching board — carry signal updating';
-    const hsEl = document.getElementById('hand-strength');
-    if (hsEl) { hsEl.textContent = ''; hsEl.className = 'nothing'; }
-    const rl = document.getElementById('reasons-list');
-    if (rl) rl.innerHTML = '<div class="reason-item">Watching board for carry patterns — next hand signal building</div>';
-    const stage = dec.stage || 'flop';
+    const watchStage = d.board_stage || dec.stage || 'flop';
     ['preflop','flop','turn','river'].forEach(s => {
       const el = document.getElementById('sp-' + s);
-      if (el) el.className = 'stage-pill' + (s === stage ? ' active' : '');
+      if (el) el.className = 'stage-pill' + (s === watchStage ? ' active' : '');
     });
     return;
   }
   if (!dec || !dec.action) {
-    // Model not loaded yet — show WAITING explicitly
-    if (!d.model_ready) {
-      text.textContent = 'WAITING';
-      text.className = 'action-wait';
-      emoji.textContent = '⏳';
-      sizing.textContent = 'Loading carry model from server...';
-      const rl = document.getElementById('reasons-list');
-      if (rl) rl.innerHTML = '<div class="reason-item">Upload a CSV or play 5+ hands to seed the model</div>';
+    // If we already have a decision showing, keep it — don't flash WAITING
+    const currentAction = text.textContent;
+    if (!currentAction || currentAction === '—' || currentAction === 'WAITING') {
+      if (!d.model_ready) {
+        text.textContent = 'WAITING';
+        text.className = 'action-wait';
+        emoji.textContent = '⏳';
+        sizing.textContent = 'Loading carry model...';
+        const rl = document.getElementById('reasons-list');
+        if (rl) rl.innerHTML = '<div class="reason-item">Upload a CSV or play 5+ hands to seed the model</div>';
+      }
     }
     return;
   }
@@ -929,7 +934,8 @@ function renderDecision(d) {
     }).join('');
   } else { rl.innerHTML = '<div class="empty-state" style="padding:8px">—</div>'; }
 
-  const stage = dec.stage || 'preflop';
+  // Use board_stage from raw data as authoritative — dec.stage may be stale
+  const stage = d.board_stage || dec.stage || 'preflop';
   ['preflop','flop','turn','river'].forEach(s => {
     const el = document.getElementById('sp-' + s);
     if (el) el.className = 'stage-pill' + (s === stage ? ' active' : '');
@@ -1232,9 +1238,38 @@ async function askClaudeForPlayer() {
 }
 
 // ── SESSION TAB ────────────────────────────────────────────────────────────────
+let _prevHoleKey = '';
+
 function trackSessionHand(rawData) {
   if (!rawData) return;
   updatePotOddsFromRaw();
+
+  // Detect hand transitions — when hole cards change, a new hand started
+  // Use the snap to determine if hero won the PREVIOUS hand
+  const snap = rawData.all_players_snap || {};
+  const heroSnap = Object.values(snap).find(p => p.isHero);
+  const holeKey = (rawData.hole_cards || []).join(',');
+
+  // Track hero prize for win detection
+  if (heroSnap) {
+    // prize > 0 means hero just won a pot this poll
+    if (heroSnap.prize > 0 && !window._heroWonThisHand) {
+      window._heroWonThisHand = true;
+    }
+    // winner flag = definitive win
+    if (heroSnap.winner) {
+      window._heroWonThisHand = true;
+    }
+  }
+
+  // New hand detected (hole cards changed to 2 new cards)
+  if (holeKey !== _prevHoleKey && holeKey !== '' && _prevHoleKey !== '') {
+    // Previous hand just ended — fire tilt check
+    const result = window._heroWonThisHand ? 'WON' : 'LOST';
+    checkTilt(result);
+    window._heroWonThisHand = false;
+  }
+  _prevHoleKey = holeKey;
 }
 
 function updatePotOddsFromRaw() {
@@ -1640,6 +1675,16 @@ renderDecision = function(d) {
   // Feature 9: range chart when on analysis tab
   if (document.getElementById('tab-analysis')?.classList.contains('active')) {
     renderPreflopRangeChart();
+  }
+  // Wire position display
+  const posEl = document.getElementById('position');
+  if (posEl && dec.position && dec.position !== 'unknown') {
+    posEl.textContent = dec.position;
+    posEl.style.display = 'inline-block';
+    posEl.title = {BTN:'Button — best position',CO:'Cutoff — late',HJ:'Hijack — middle',EP:'Early position',SB:'Small blind',BB:'Big blind'}[dec.position] || dec.position;
+  } else if (posEl) {
+    posEl.textContent = '';
+    posEl.style.display = 'none';
   }
 };
 
