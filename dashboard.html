@@ -977,8 +977,13 @@ function renderCarryAlert(d) {
 // ── PLAYER HUB ─────────────────────────────────────────────────────────────────
 let currentModalPlayer = null;
 function renderPlayerHub(d) {
-  const stats = d.player_stats || state.playerStats || {};
-  if (Object.keys(stats).length) Object.assign(state.playerStats, stats);
+  const stats = d.player_stats || {};
+  // Only merge stats that have real data — don't overwrite with empty snap data
+  Object.keys(stats).forEach(name => {
+    if (stats[name] && (stats[name].handsTracked||0) >= 1) {
+      state.playerStats[name] = { ...state.playerStats[name], ...stats[name] };
+    }
+  });
   const snap = d.all_players_snap || {};
   const snapNames = Object.keys(snap).filter(n => !snap[n].isHero);
   const statsNames = Object.keys(state.playerStats).filter(n => (state.playerStats[n].handsTracked||0) >= 1);
@@ -991,6 +996,17 @@ function renderPlayerHub(d) {
   if (countEl) countEl.textContent = players.length;
   if (!players.length) return;
   const el = document.getElementById('player-list');
+  // Only rebuild DOM if player count or tracked stats changed — prevents 500ms flicker
+  const newHash = players.map(([n,s])=>`${n}:${s.handsTracked||0}:${s.winRate||0}:${s.vpip||0}`).join('|');
+  if (el._lastHash === newHash) {
+    // Just update live stacks without rebuilding
+    players.forEach(([name, s]) => {
+      const stackEl = el.querySelector(`[data-stack="${name}"]`);
+      if (stackEl && s._snap?.stack) stackEl.textContent = 'Stack: ' + s._snap.stack;
+    });
+    return;
+  }
+  el._lastHash = newHash;
   el.innerHTML = players.map(([name, s]) => {
     const isDanger = s.isDanger || (s.winRate >= 60 && (s.handsTracked||0) >= 5);
     const isFeeder = !isDanger && s.winRate < 35 && (s.handsTracked||0) >= 5;
@@ -1019,7 +1035,7 @@ function renderPlayerHub(d) {
         <div class="hud-pf-stat"><div class="hud-pf-val">${s.wsd||0}%</div><div class="hud-pf-lbl">W$SD</div></div>
       </div>` : `<div style="font-size:12px;color:var(--t3);font-family:var(--f-mono);padding:3px 0">${stackLine || 'New player'}</div>`}
       <div class="p-bottom">
-        <span class="p-sample">${s.handsTracked||0}h ${stackLine&&hasStats?stackLine:''}</span>
+        <span class="p-sample" data-stack="${name}">${s.handsTracked||0}h ${stackLine&&hasStats?stackLine:''}</span>
       </div>
     </div>`;
   }).join('');
