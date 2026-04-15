@@ -724,7 +724,7 @@ let ws = null, wsRetry = 0;
 function connectWS() {
   const url = `${WS_URL}/ws/${SESSION}`;
   try { ws = new WebSocket(url); } catch(e) { scheduleReconnect(); return; }
-  ws.onopen = () => { wsRetry = 0; setStatus('ws-status','WS LIVE','ok'); };
+  ws.onopen = () => { wsRetry = 0; setStatus('ws-status','WS LIVE','ok'); setTimeout(loadPlayerStats, 1000); };
   ws.onmessage = (evt) => {
     try {
       const msg = JSON.parse(evt.data);
@@ -841,7 +841,35 @@ function renderDecision(d) {
 
   const ws = document.getElementById('waiting-state');
   if (ws) ws.style.display = 'none';
-  if (!dec || !dec.action) return;
+  // WATCHING = folded, board still running — show carry/board but grey action box
+  if (dec && dec.watching) {
+    text.textContent = 'FOLDED';
+    text.className = 'action-wait';
+    emoji.textContent = '👁';
+    sizing.textContent = 'Watching board — carry signal updating';
+    const hsEl = document.getElementById('hand-strength');
+    if (hsEl) { hsEl.textContent = ''; hsEl.className = 'nothing'; }
+    const rl = document.getElementById('reasons-list');
+    if (rl) rl.innerHTML = '<div class="reason-item">Watching board for carry patterns — next hand signal building</div>';
+    const stage = dec.stage || 'flop';
+    ['preflop','flop','turn','river'].forEach(s => {
+      const el = document.getElementById('sp-' + s);
+      if (el) el.className = 'stage-pill' + (s === stage ? ' active' : '');
+    });
+    return;
+  }
+  if (!dec || !dec.action) {
+    // Model not loaded yet — show WAITING explicitly
+    if (!d.model_ready) {
+      text.textContent = 'WAITING';
+      text.className = 'action-wait';
+      emoji.textContent = '⏳';
+      sizing.textContent = 'Loading carry model from server...';
+      const rl = document.getElementById('reasons-list');
+      if (rl) rl.innerHTML = '<div class="reason-item">Upload a CSV or play 5+ hands to seed the model</div>';
+    }
+    return;
+  }
 
   const vc = (dec.vClass || 'check').toLowerCase();
   box.className = vc;
@@ -987,6 +1015,7 @@ function renderPlayerHub(d) {
   const snap = d.all_players_snap || {};
   const snapNames = Object.keys(snap).filter(n => !snap[n].isHero);
   const statsNames = Object.keys(state.playerStats).filter(n => (state.playerStats[n].handsTracked||0) >= 1);
+  // Show snap players immediately (live at table) even before hands tracked
   const allNames = [...new Set([...snapNames, ...statsNames])];
   const players = allNames.map(name => {
     const s = state.playerStats[name] || {};
