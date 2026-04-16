@@ -1755,7 +1755,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                 (session_id,)
             ).fetchone()["n"]
         if hand_count > 0:
-            model = build_model_from_db(session_id)
+            model = await asyncio.to_thread(build_model_from_db, session_id)
             # Also load player stats
             # Load from global_players — cross-session stats, keyed by player_id
             with get_db() as db:
