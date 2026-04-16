@@ -4,6 +4,7 @@ FastAPI + SQLite + LangGraph + Letta Cloud + Mem0 + Claude
 """
 
 import sqlite3, json, os, asyncio
+import httpx
 from datetime import datetime
 from typing import Dict, Set, TypedDict
 from pathlib import Path
@@ -37,9 +38,13 @@ except ImportError:
 
 from contextlib import asynccontextmanager
 
+_queue_running = False  # must be defined before lifespan
+
 @asynccontextmanager
 async def lifespan(app):
+    global _queue_running
     if not _queue_running:
+        _queue_running = True  # set before creating task to prevent double-start
         asyncio.create_task(_process_claude_queue())
     yield
 
@@ -106,8 +111,38 @@ app.add_middleware(
 )
 
 MEM0_API_KEY  = os.environ.get("MEM0_API_KEY", "")
-ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-LETTA_API_KEY = os.environ.get("LETTA_API_KEY", "")
+ANTHROPIC_KEY    = os.environ.get("ANTHROPIC_API_KEY", "")
+LETTA_API_KEY    = os.environ.get("LETTA_API_KEY", "")
+OPENROUTER_KEY   = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_URL   = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "z-ai/glm-5.1"
+
+def call_glm(prompt: str, max_tokens: int = 400, system: str = "") -> str:
+    """Call GLM-5.1 via OpenRouter. Returns empty string on failure."""
+    key = OPENROUTER_KEY or ANTHROPIC_KEY
+    if not key:
+        return ""
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type":  "application/json",
+        "HTTP-Referer":  "https://pokernow-advisor.railway.app",
+        "X-Title":       "PokerNow Advisor",
+    }
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+    try:
+        r = httpx.post(OPENROUTER_URL, headers=headers, json={
+            "model": OPENROUTER_MODEL,
+            "max_tokens": max_tokens,
+            "messages": messages,
+        }, timeout=20)
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        print(f"[GLM-5.1] call failed: {e}")
+        return ""
 DB_PATH       = os.getenv("DB_PATH", "poker.db")
 # USER_ID is now the game_id — each game has its own isolated Mem0 namespace.
 # No global USER_ID. Pass game_id wherever Mem0 is called.
@@ -271,29 +306,27 @@ def node_load_context(state: HandAnalysisState) -> dict:
             allin_t = db.execute("SELECT COUNT(*) FROM hands WHERE game_id=? AND all_in=1", (state["game_id"],)).fetchone()[0]
             allin_w = db.execute("SELECT COUNT(*) FROM hands WHERE game_id=? AND all_in=1 AND hero_won=1", (state["game_id"],)).fetchone()[0]
             recent  = db.execute("SELECT hole_cards, board, hero_won, all_in FROM hands WHERE game_id=? ORDER BY id DESC LIMIT 10", (state["game_id"],)).fetchall()
-
-        live_wr  = round(won/total*100, 1)      if total  > 0 else 0
-        allin_wr = round(allin_w/allin_t*100,1) if allin_t > 0 else 0
-
-        # Carry rate from last 50 hands
-        recent50 = []
-        with get_db() as db:
             recent50 = [dict(r) for r in db.execute("SELECT hole_cards, board FROM hands WHERE game_id=? ORDER BY id DESC LIMIT 50", (state["game_id"],)).fetchall()]
-        carry_pairs = sum(
-            1 for i in range(1, len(recent50))
-            if set(json.loads(recent50[i-1].get("board","[]") or "[]")) &
-               set(json.loads(recent50[i].get("hole_cards","[]") or "[]") + json.loads(recent50[i].get("board","[]") or "[]"))
-        )
-        carry_rate = round(carry_pairs / max(len(recent50)-1, 1) * 100, 1)
-
-        # Danger players from DB — persistent across sessions, not just current session stats
-        with get_db() as db2:
-            danger_rows = db2.execute(
+            danger_rows = db.execute(
                 """SELECT player_name FROM player_stats
                    WHERE game_id=? AND showdown_count >= 5
                    AND CAST(showdown_wins AS FLOAT)/MAX(showdown_count,1) >= 0.60""",
                 (state["game_id"],)
             ).fetchall()
+
+        live_wr  = round(won/total*100, 1)      if total  > 0 else 0
+        allin_wr = round(allin_w/allin_t*100,1) if allin_t > 0 else 0
+
+        # Carry rate from last 50 hands (already loaded above)
+        carry_pairs = sum(
+            1 for i in range(1, len(recent50))
+            if (set(json.loads(recent50[i-1].get("hole_cards","[]") or "[]") +
+                    json.loads(recent50[i-1].get("board","[]") or "[]")) &  # ALL prev hand cards
+               set(json.loads(recent50[i].get("hole_cards","[]") or "[]") +
+                   json.loads(recent50[i].get("board","[]") or "[]")) )  # ALL next hand cards
+        )
+        carry_rate = round(carry_pairs / max(len(recent50)-1, 1) * 100, 1)
+
         danger = [r["player_name"] for r in danger_rows]
 
         return {
@@ -388,7 +421,6 @@ Update your memory. Respond in JSON only:
         ls = state["live_stats"]
         result_str = "WON" if state["hero_won"] else ("FOLDED" if state["hero_folded"] else "LOST")
         shown = ", ".join(f"{p}: {' '.join(c)}" for p,c in state["shown_hands"].items()) if state["shown_hands"] else "none"
-        client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
         prompt = f"""Hand #{state['hand_num']}: {result_str} | Pot: {state['pot']} | All-in: {state['all_in']}
 Hero: {' '.join(state['hole_cards'])} Board: {' '.join(state['board'])}
 Opponents: {shown}
@@ -396,9 +428,8 @@ Stats: WR={ls.get('win_rate',0)}% Carry={ls.get('carry_rate',0)}% Danger={state[
 Memories: {'; '.join(state['memories'][:3]) if state['memories'] else 'none'}
 
 Respond JSON only: {{"nextHand": "instruction", "weight_updates": {{"carryBoost": 0.0, "dangerWarning": false, "allinWarning": false, "hotCards": []}}}}"""
-        resp = client.messages.create(model="claude-sonnet-4-5", max_tokens=300,
-                                      messages=[{"role":"user","content":prompt}])
-        return {"letta_response": resp.content[0].text.strip()}
+        text = call_glm(prompt, max_tokens=300)
+        return {"letta_response": text}
     except Exception as e:
         print(f"[graph:letta_reason] Claude fallback also failed: {e}")
         return {"letta_response": ""}
@@ -926,20 +957,125 @@ def build_model_from_db(game_id: str) -> dict:
         else:
             confidence = "learning"
 
+    # Last 3 hands from THIS game — extension uses these to seed carry chain
+    # CSV and live DOM are the same deck: prior CSV hands = prior hands this session
+    last3 = [{"hole_cards": h["hole_cards"], "flop": h["flop"],
+               "turn": h["turn"], "river": h["river"]}
+             for h in hands[-3:]]
+
+    # ── Chi deviation — matches model.js logic exactly ─────────────────────────
+    import math as _math
+    EARLY_RATE = 5 / 7
+    chi_deviation  = {}
+    deck_frequency = {}
+    for c in ALL_CARDS:
+        e = sum(pos_freq[c].get(p, 0) for p in EARLY_POS)
+        t = sum(pos_freq[c].values())
+        if t < 3:
+            chi_deviation[c] = 0
+            continue
+        expected = t * EARLY_RATE
+        z = (e - expected) / _math.sqrt(max(expected, 1))
+        chi_deviation[c] = round(z, 3)
+        deck_frequency[c] = {
+            "observed": e, "expected": round(expected, 1),
+            "z": round(z, 2), "total": t,
+            "status": "hot" if z > 1.0 else ("shadow" if z < -0.3 else "neutral"),
+        }
+
+    # Shadow cards — avoid as hole cards
+    shadow_cards = sorted(
+        [c for c in ALL_CARDS if chi_deviation.get(c, 0) < -0.2
+         and sum(pos_freq[c].values()) >= 5],
+        key=lambda c: chi_deviation[c]
+    )
+
+    # Chi-corrected topCards for 50+ hands — matches model.js buildModel
+    deck_assessed = total >= 50
+    if deck_assessed:
+        top_cards = sorted(
+            [c for c in ALL_CARDS if sum(pos_freq[c].values()) > 2],
+            key=lambda c: (chi_deviation.get(c, 0) + carry_hot.get(c, 0) * 0.01),
+            reverse=True
+        )[:15]
+
+    # ── Knowledge graph — card co-occurrence with lift scores ─────────────────
+    card_given  = {}
+    card_totals = {c: sum(pos_freq[c].values()) for c in ALL_CARDS}
+    for h in hands:
+        cards = list(set(h["hole_cards"] + h["flop"] + h["turn"] + h["river"]))
+        for a in cards:
+            if a not in card_given:
+                card_given[a] = {}
+            for b in cards:
+                if a != b:
+                    card_given[a][b] = card_given[a].get(b, 0) + 1
+
+    knowledge_graph = {}
+    if total >= 20:
+        for c1, neighbors in card_given.items():
+            knowledge_graph[c1] = {}
+            for c2, cooccur in neighbors.items():
+                p1 = (card_totals.get(c1, 1)) / max(total, 1)
+                p2 = (card_totals.get(c2, 1)) / max(total, 1)
+                expected = p1 * p2 * total
+                lift = cooccur / expected if expected > 0.5 else 0
+                if lift > 1.5:
+                    knowledge_graph[c1][c2] = round(lift, 2)
+
+    # ── Markov rank transitions ────────────────────────────────────────────────
+    markov_ranks = {}
+    if total >= 30:
+        rank_totals = {}
+        for i in range(len(hands) - 1):
+            b1ranks = set(c[:-1] for c in hands[i]["hole_cards"] + hands[i]["flop"] + hands[i]["turn"] + hands[i]["river"])
+            b2ranks = set(c[:-1] for c in hands[i+1]["hole_cards"] + hands[i+1]["flop"] + hands[i+1]["turn"] + hands[i+1]["river"])
+            for r1 in b1ranks:
+                rank_totals[r1] = rank_totals.get(r1, 0) + 1
+                if r1 not in markov_ranks:
+                    markov_ranks[r1] = {}
+                for r2 in b2ranks:
+                    markov_ranks[r1][r2] = markov_ranks[r1].get(r2, 0) + 1
+        # Normalize to probabilities
+        for r1 in markov_ranks:
+            tot = rank_totals.get(r1, 1)
+            for r2 in markov_ranks[r1]:
+                markov_ranks[r1][r2] = round(markov_ranks[r1][r2] / tot, 2)
+
+    # ── Regime carry rate (last 20 hands) ─────────────────────────────────────
+    regime_carry_rate = 0
+    if total >= 20:
+        recent20 = hands[-20:]
+        rp = rt = 0
+        for i in range(len(recent20) - 1):
+            s1 = set(recent20[i]["hole_cards"] + recent20[i]["flop"] + recent20[i]["turn"] + recent20[i]["river"])
+            s2 = set(recent20[i+1]["hole_cards"] + recent20[i+1]["flop"] + recent20[i+1]["turn"] + recent20[i+1]["river"])
+            rt += 1
+            if s1 & s2:
+                rp += 1
+        regime_carry_rate = round(rp / rt * 100) if rt else 0
+
     return {
-        "earlyBias":      early_bias,
-        "posCarry":       pos_carry,
-        "carryHot":       carry_hot,
-        "topCards":       top_cards,
-        "carryRate":      carry_rate,
-        "totalHands":     total,
-        "confidence":     confidence,
+        "earlyBias":        early_bias,
+        "posCarry":         pos_carry,
+        "carryHot":         carry_hot,
+        "topCards":         top_cards,
+        "carryRate":        carry_rate,
+        "totalHands":       total,
+        "confidence":       confidence,
+        "deckAssessed":     deck_assessed,
+        "chiDeviation":     chi_deviation,
+        "deckFrequency":    deck_frequency,
+        "shadowCards":      shadow_cards,
+        "knowledgeGraph":   knowledge_graph,
+        "markovRanks":      markov_ranks,
+        "regimeCarryRate":  regime_carry_rate,
         "tableSegments": {
             "small":  {"count": len(small_table),  "carryRate": segment_carry(small_table)},
             "medium": {"count": len(medium_table), "carryRate": segment_carry(medium_table)},
             "large":  {"count": len(large_table),  "carryRate": segment_carry(large_table)},
         },
-        "hands": []  # carry chain uses current session hands only — not cross-session
+        "hands": last3,
     }
 
 def maybe_rebuild_model(game_id: str, hand_count: int) -> dict:
@@ -960,12 +1096,15 @@ def maybe_rebuild_model(game_id: str, hand_count: int) -> dict:
     return cached.get("model", {})
 
 
+_mem0_client = None
 def get_mem0():
-    return MemoryClient(api_key=MEM0_API_KEY)
+    global _mem0_client
+    if _mem0_client is None:
+        _mem0_client = MemoryClient(api_key=MEM0_API_KEY)
+    return _mem0_client
 
 # ── Server-side Claude queue ──────────────────────────────────────────────────
 _claude_queue   = asyncio.Queue(maxsize=50)  # max 50 pending analyses — prevents memory growth
-_queue_running  = False
 
 async def _process_claude_queue():
     global _queue_running
@@ -1064,7 +1203,7 @@ async def log_hand(data: HandData):
             engine_confidence = data.decision.get('confidence', 0) if data.decision else 0
             engine_hand_strength = data.decision.get('handStrength', 0) if data.decision else 0
             db.execute(
-                "INSERT INTO hands (game_id,session_id,hand_num,hole_cards,board,hero_won,hero_folded,all_in,pot,away_mode,shown_hands,player_stats,player_count,engine_action,engine_confidence,engine_hand_strength) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO hands (game_id,session_id,hand_num,hole_cards,board,hero_won,hero_folded,all_in,pot,away_mode,shown_hands,player_stats,player_count,engine_action,engine_confidence,engine_hand_strength) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (game_id, data.session_id, data.hand_num,
                  json.dumps(data.hole_cards), json.dumps(board),
                  int(data.hero_won), int(data.hero_folded), int(data.all_in),
@@ -1072,6 +1211,9 @@ async def log_hand(data: HandData):
                  json.dumps(data.players_in_hand), player_count,
                  engine_action, engine_confidence, engine_hand_strength)
             )
+            hand_was_new = db.execute("SELECT changes()").fetchone()[0] > 0
+            if not hand_was_new:
+                return {"ok": True, "duplicate": True, "hand_num": data.hand_num}
             for p in data.players_in_hand:
                 db.execute(
                     """INSERT OR IGNORE INTO player_hands
@@ -1137,7 +1279,7 @@ async def log_hand(data: HandData):
                      1 if (p.get("won",0) and p.get("went_to_showdown",0)) else 0,
                      p.get("saw_flop",0), p.get("all_in",0), p.get("dom_wins",0),
                      p.get("in_steal_position",0), p.get("attempted_steal",0),
-                     p.get("folded_to_steal",0), p.get("folded_to_steal",0),
+                     p.get("folded_to_steal",0), p.get("in_steal_position",0),
                      p.get("faced_three_bet",0), p.get("folded_to_three_bet",0),
                      p.get("in_steal_position",0) if p.get("pfr",0) else 0,  # cbet_opps = was PFR
                      p.get("made_cbet",0), p.get("faced_cbet",0), p.get("folded_to_cbet",0))
@@ -1217,7 +1359,6 @@ async def log_hand(data: HandData):
 async def analyze(game_id: str = ""):
     try:
         mem0   = get_mem0()
-        client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
         # Use game_id as Mem0 user namespace — fall back to listing all if not provided
         mem_user = game_id if game_id else None
@@ -1270,12 +1411,8 @@ Based only on the actual data above (no assumptions), provide analysis covering:
 
 Reference specific hands from memory where possible. Do not assume anything not in the data."""
 
-        resp = client.messages.create(
-            model="claude-sonnet-4-5",
-            max_tokens=2000,
-            messages=[{"role":"user","content":prompt}]
-        )
-        narrative = resp.content[0].text
+        narrative = call_glm(prompt, max_tokens=2000,
+                             system="You are a poker data analyst. Be specific, cite actual numbers.")
 
         # ── STORE in analysis_log so it builds historical record ──────────────
         with get_db() as db:
@@ -1382,7 +1519,8 @@ async def proof(session_id: str):
 @app.get("/health")
 async def health():
     mem0_preview   = MEM0_API_KEY[:8]  + "…" if MEM0_API_KEY  else "NOT SET"
-    claude_preview = ANTHROPIC_KEY[:8] + "…" if ANTHROPIC_KEY else "NOT SET"
+    key_for_preview = OPENROUTER_KEY or ANTHROPIC_KEY
+    claude_preview  = f"GLM-5.1 via OR ({key_for_preview[:8]}…)" if key_for_preview else "NOT SET"
 
     mem0_live = False; mem0_error = ""
     try:
@@ -1394,10 +1532,13 @@ async def health():
 
     claude_live = False; claude_error = ""
     try:
-        c = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-        c.messages.create(model="claude-sonnet-4-5", max_tokens=10,
-                          messages=[{"role":"user","content":"hi"}])
-        claude_live = True
+        # Health check: verify GLM-5.1 / OpenRouter key is set and reachable
+        key = OPENROUTER_KEY or ANTHROPIC_KEY
+        if key:
+            test = call_glm("hi", max_tokens=5)
+            claude_live = bool(test)
+        else:
+            claude_error = "No API key set (OPENROUTER_API_KEY or ANTHROPIC_API_KEY)"
     except Exception as e:
         claude_error = str(e)[:100]
 
@@ -1490,15 +1631,24 @@ async def _run_between_hands(data_dict: dict):
         live_stats     = result.get("live_stats", {})
         danger_players = result.get("danger_players", [])
 
+        # Regime detection: if rolling carry rate drops significantly → possible seed reset
+        rolling_carry = live_stats.get("carry_rate", 0)
+        total_hands   = live_stats.get("total_hands", 0)
+        regime_shift  = rolling_carry < 25 and total_hands > 30  # carry collapsed
+
         await manager.broadcast(game_id, {
             "type": "weight_updates",
             "data": {
                 "hand_num":       data_dict.get("hand_num", 0),
                 "next_hand":      next_hand,
                 "weight_updates": weight_updates,
-                "carry_rate":     live_stats.get("carry_rate", 0),
+                "carry_rate":     rolling_carry,
                 "live_wr":        live_stats.get("win_rate", 0),
                 "danger_players": danger_players,
+                "hero_won":       data_dict.get("hero_won", False),
+                "hero_folded":    data_dict.get("hero_folded", False),
+                "regime_shift":   regime_shift,
+                "deck_assessed":  total_hands >= 50,
             }
         })
         return {"nextHand": next_hand, "weight_updates": weight_updates}
@@ -1577,7 +1727,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     try:
         await websocket.send_json({"type": "status", "data": {
             "mem0_live":   bool(MEM0_API_KEY),
-            "claude_live": bool(ANTHROPIC_KEY),
+            "claude_live": bool(OPENROUTER_KEY or ANTHROPIC_KEY),
             "letta_live":  bool(LETTA_API_KEY),
             "game_id":     session_id,
         }})
@@ -1597,7 +1747,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     try:
         with get_db() as db:
             hand_count = db.execute(
-                "SELECT COUNT(*) as n FROM hands WHERE hole_cards IS NOT NULL"
+                "SELECT COUNT(*) as n FROM hands WHERE game_id=? AND hole_cards IS NOT NULL",
+                (session_id,)
             ).fetchone()["n"]
             game_hand_count = db.execute(
                 "SELECT COUNT(*) as n FROM hands WHERE game_id=? AND hole_cards IS NOT NULL",
@@ -1703,7 +1854,7 @@ async def post_raw(data: RawData):
         payload["server_status"] = {
             "hands_logged": hc,
             "mem0_live":    bool(MEM0_API_KEY),
-            "claude_live":  bool(ANTHROPIC_KEY),
+            "claude_live":  bool(OPENROUTER_KEY or ANTHROPIC_KEY),
         }
     except Exception as e:
         print(f"[raw] DB count failed: {e}")
@@ -1772,7 +1923,7 @@ async def get_state(session_id: str):
             "server_status": {
                 "hands_logged": hc,
                 "mem0_live":    bool(MEM0_API_KEY),
-                "claude_live":  bool(ANTHROPIC_KEY),
+                "claude_live":  bool(OPENROUTER_KEY or ANTHROPIC_KEY),
             },
         }
     except Exception as e:
@@ -1919,9 +2070,15 @@ async def upload_csv(request: FastAPIRequest, game_id: str = ""):
                 "data": {
                     "model_ready": True,
                     "model_meta": {
-                        "carry_rate":  model_json.get("carryRate", 0),
-                        "total_hands": model_json.get("totalHands", 0),
-                        "top_cards":   model_json.get("topCards", [])[:5],
+                        "carry_rate":    model_json.get("carryRate", 0),
+                        "total_hands":   model_json.get("totalHands", 0),
+                        "top_cards":     model_json.get("topCards", [])[:8],
+                        "shadow_cards":  model_json.get("shadowCards", [])[:10],
+                        "markovRanks":   model_json.get("markovRanks", {}),
+                        "knowledgeGraph":model_json.get("knowledgeGraph", {}),
+                        "deckAssessed":  model_json.get("deckAssessed", False),
+                        "regimeCarryRate": model_json.get("regimeCarryRate", 0),
+                        "chiDeviation":   model_json.get("chiDeviation", {}),
                     },
                     "decision": {},
                 }
@@ -2116,6 +2273,120 @@ async def export_session(game_id: str):
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+# ── GET /deck_assessment/{game_id} ─────────────────────────────────────────
+@app.get("/deck_assessment/{game_id}")
+async def deck_assessment(game_id: str):
+    """
+    After 50+ hands: chi-squared assessment of entire deck.
+    Finds which cards are over/under-represented in early positions.
+    This reveals the MT seed's bias pattern for this specific game.
+    """
+    try:
+        import math
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT hole_cards, board FROM hands WHERE game_id=? AND hole_cards IS NOT NULL ORDER BY id ASC",
+                (game_id,)
+            ).fetchall()
+
+        if len(rows) < 20:
+            return {"ok": False, "error": f"Need 20+ hands, have {len(rows)}"}
+
+        EARLY_POS = {'hole_1','hole_2','flop_1','flop_2','flop_3'}
+        EARLY_RATE = 5/7  # 5 early / 7 hero-visible positions
+        pos_freq = {c: {} for c in ALL_CARDS}
+
+        for row in rows:
+            hc = json.loads(row["hole_cards"] or "[]")
+            bd = json.loads(row["board"] or "[]")
+            for j,c in enumerate(hc):
+                k = f"hole_{j+1}"
+                pos_freq[c][k] = pos_freq[c].get(k,0) + 1
+            flop = bd[:3]
+            for j,c in enumerate(flop):
+                k = f"flop_{j+1}"
+                pos_freq[c][k] = pos_freq[c].get(k,0) + 1
+            if len(bd) >= 4:
+                pos_freq[bd[3]]["turn"] = pos_freq[bd[3]].get("turn",0) + 1
+            if len(bd) >= 5:
+                pos_freq[bd[4]]["river"] = pos_freq[bd[4]].get("river",0) + 1
+
+        chi_results = {}
+        for c in ALL_CARDS:
+            e = sum(pos_freq[c].get(p,0) for p in EARLY_POS)
+            t = sum(pos_freq[c].values())
+            if t < 3: continue
+            expected = t * EARLY_RATE
+            z = (e - expected) / math.sqrt(max(expected, 1))
+            chi_results[c] = {
+                "card": c, "observed_early": e, "expected_early": round(expected,1),
+                "z_score": round(z,2), "total": t,
+                "status": "hot" if z > 1.0 else ("shadow" if z < -0.2 else "neutral")
+            }
+
+        # Sort by Z-score
+        hot_cards    = [v for v in chi_results.values() if v["status"] == "hot"]
+        shadow_cards = [v for v in chi_results.values() if v["status"] == "shadow"]
+        hot_cards.sort(key=lambda x: -x["z_score"])
+        shadow_cards.sort(key=lambda x: x["z_score"])
+
+        # Knowledge graph: top card co-occurrences across hands
+        cooccur = {}
+        hand_list = []
+        for row in rows:
+            hc = json.loads(row["hole_cards"] or "[]")
+            bd = json.loads(row["board"] or "[]")
+            hand_list.append(set(hc + bd))
+
+        edges = {}
+        for hand in hand_list:
+            cards = list(hand)
+            for i in range(len(cards)):
+                for j in range(i+1, len(cards)):
+                    k = tuple(sorted([cards[i], cards[j]]))
+                    edges[k] = edges.get(k,0) + 1
+
+        # Regime detection: rolling carry rate (last 20 hands)
+        recent = hand_list[-20:] if len(hand_list) >= 20 else hand_list
+        regime_carries = sum(1 for i in range(len(recent)-1) if recent[i] & recent[i+1])
+        regime_rate = round(regime_carries / max(len(recent)-1,1) * 100, 1)
+
+        # Markov rank transitions
+        rank_trans = {}
+        for i in range(len(hand_list)-1):
+            r1s = set(c[:-1] for c in hand_list[i])
+            r2s = set(c[:-1] for c in hand_list[i+1])
+            for r1 in r1s:
+                if r1 not in rank_trans: rank_trans[r1] = {}
+                for r2 in r2s:
+                    rank_trans[r1][r2] = rank_trans[r1].get(r2,0) + 1
+
+        top_edges = sorted(edges.items(), key=lambda x: -x[1])[:20]
+
+        return {
+            "ok": True,
+            "game_id": game_id,
+            "hands_analyzed": len(rows),
+            "deck_assessed": len(rows) >= 50,
+            "hot_cards": hot_cards[:10],
+            "shadow_cards": shadow_cards[:10],
+            "regime_carry_rate": regime_rate,
+            "regime_stable": regime_rate > 30,
+            "knowledge_graph_edges": [
+                {"card_a": e[0][0], "card_b": e[0][1], "co_occurs": e[1]}
+                for e in top_edges
+            ],
+            "markov_transitions": {
+                r1: sorted(trans.items(), key=lambda x: -x[1])[:5]
+                for r1, trans in rank_trans.items()
+                if sum(trans.values()) >= 5
+            },
+            "recommended_topCards": [v["card"] for v in hot_cards[:15]],
+        }
+    except Exception as e:
+        import traceback
+        return {"ok": False, "error": str(e), "trace": traceback.format_exc()}
+
 # ── POST /player_narrative — Claude commentary on a specific player ────────────
 class NarrativeRequest(BaseModel):
     game_id:     str
@@ -2196,12 +2467,8 @@ Write 4-5 lines of specific, actionable commentary covering:
 
 Be direct and specific. Avoid generic advice. Base everything on the actual stats above."""
 
-        client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-        resp   = client.messages.create(
-            model="claude-sonnet-4-5", max_tokens=300,
-            messages=[{"role":"user","content":prompt}]
-        )
-        commentary = resp.content[0].text.strip()
+        commentary = call_glm(prompt, max_tokens=300,
+                               system="You are a poker coach. Be direct and specific.")
 
         # Store commentary back to player_stats
         with get_db() as db:
