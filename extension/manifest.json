@@ -6,7 +6,9 @@
   "permissions": ["storage", "scripting", "activeTab"],
   "host_permissions": [
     "https://www.pokernow.club/*",
-    "https://pokernow.club/*"
+    "https://pokernow.club/*",
+    "https://www.pokernow.com/*",
+    "https://pokernow.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -19,7 +21,9 @@
     {
       "matches": [
         "https://www.pokernow.club/*",
-        "https://pokernow.club/*"
+        "https://pokernow.club/*",
+        "https://www.pokernow.com/*",
+        "https://pokernow.com/*"
       ],
       "js": ["lib/model.js", "content.js"],
       "css": ["overlay.css"],
@@ -30,7 +34,12 @@
   "web_accessible_resources": [
     {
       "resources": ["overlay.css", "lib/model.js"],
-      "matches": ["https://www.pokernow.club/*", "https://pokernow.club/*"]
+      "matches": [
+        "https://www.pokernow.club/*",
+        "https://pokernow.club/*",
+        "https://www.pokernow.com/*",
+        "https://pokernow.com/*"
+      ]
     }
   ],
   "icons": {
