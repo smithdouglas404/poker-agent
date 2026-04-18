@@ -1207,9 +1207,92 @@ function renderAll() {
   renderStatsBar(d);
 }
 
-// ── DECISION ───────────────────────────────────────────────────────────────────
+// ── DECISION ENGINE (client-side — extension only pipes raw DOM) ────────────
+const _RANK_VAL = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,'10':10,J:11,Q:12,K:13,A:14};
+function evalHand(hole, board) {
+  const all = [...hole, ...board];
+  if (!all.length) return { name: '', strength: 0 };
+  const rankCount = {}, suitCount = {};
+  all.forEach(c => { rankCount[c.slice(0,-1)] = (rankCount[c.slice(0,-1)]||0)+1; suitCount[c.slice(-1)] = (suitCount[c.slice(-1)]||0)+1; });
+  const pairs = Object.entries(rankCount).filter(([,n])=>n>=2).map(([r])=>r);
+  const trips = Object.entries(rankCount).filter(([,n])=>n>=3).map(([r])=>r);
+  const quads = Object.entries(rankCount).filter(([,n])=>n>=4).map(([r])=>r);
+  const flushSuit = Object.entries(suitCount).find(([,n])=>n>=5);
+  const vals = [...new Set(all.map(c => _RANK_VAL[c.slice(0,-1)]||0).filter(Boolean))].sort((a,b)=>a-b);
+  let maxStreak=1,streak=1;
+  for (let i=1;i<vals.length;i++){ if(vals[i]===vals[i-1]+1) streak++; else streak=1; if(streak>maxStreak) maxStreak=streak; }
+  const hRanks = hole.map(c=>c.slice(0,-1));
+  const bRanks = board.map(c=>c.slice(0,-1));
+  const isPP = hRanks.length===2 && hRanks[0]===hRanks[1];
+  const holePairs = hRanks.filter(r => bRanks.includes(r));
+  // Draws
+  const hSuits = hole.map(c=>c.slice(-1));
+  const flushDrawSuit = hSuits.find(s => (board.map(c=>c.slice(-1)).filter(bs=>bs===s).length + hSuits.filter(x=>x===s).length) === 4);
+  if (quads.length)              return { name:`four ${quads[0]}s`,    strength:8 };
+  if (trips.length&&pairs.length>1) return { name:'full house',         strength:7 };
+  if (flushSuit)                 return { name:`${flushSuit[0]} flush`, strength:6 };
+  if (maxStreak>=5)              return { name:'straight',              strength:5 };
+  if (trips.length)              return { name:`three ${trips[0]}s`,    strength:4 };
+  if (pairs.length>=2)           return { name:'two pair',              strength:3 };
+  if (isPP)                      return { name:`pocket ${hRanks[0]}s`,  strength:2.5 };
+  if (holePairs.length>=1)       return { name:`pair of ${holePairs[0]}s`, strength:2 };
+  if (flushDrawSuit)             return { name:`flush draw (${flushDrawSuit})`, strength:1.5 };
+  if (maxStreak===4)             return { name:'open-ended straight draw', strength:1.5 };
+  if (maxStreak===3)             return { name:'gutshot draw',          strength:0.8 };
+  return { name:'high card', strength: 0 };
+}
+
+function computeDecision(d) {
+  const hole  = d.hole_cards  || [];
+  const board = d.board_cards || [];
+  if (hole.length < 2) return null;
+  const bt = typeof d.board_total === 'number' ? d.board_total : board.length;
+  const stage = d.board_stage || (bt >= 5 ? 'river' : bt === 4 ? 'turn' : bt === 3 ? 'flop' : 'preflop');
+  const { name, strength } = evalHand(hole, board);
+  const hRanks = hole.map(c => c.slice(0,-1));
+  const hVals = hole.map(c => _RANK_VAL[c.slice(0,-1)]||0);
+  const isPP = hRanks[0] === hRanks[1];
+  const highs = hVals.filter(v => v >= 11).length;
+  const s = strength;
+  const reasons = [];
+  let action, sizing = null, vClass, emoji, confidence;
+
+  if (stage === 'preflop') {
+    if (isPP && hVals[0] >= 10)   { action='RAISE'; sizing='3x';   vClass='raise'; emoji='🚀'; confidence=85; reasons.push(`Pocket ${hRanks[0]}s — premium`); }
+    else if (isPP)                { action='CALL';  sizing='call'; vClass='call';  emoji='🟡'; confidence=55; reasons.push(`Small pocket pair — set-mine`); }
+    else if (highs === 2)         { action='RAISE'; sizing='2.5x'; vClass='raise'; emoji='🟢'; confidence=70; reasons.push(`${hole.join(' ')} — two broadway cards`); }
+    else if (highs === 1)         { action='CALL';  sizing='call'; vClass='call';  emoji='🟡'; confidence=40; reasons.push(`One high card — speculative`); }
+    else                          { action='FOLD';  vClass='fold'; emoji='🔴'; confidence=20; reasons.push(`Weak holding — fold`); }
+  } else if (stage === 'flop') {
+    if      (s >= 7) { action='RAISE'; sizing='pot';     vClass='raise'; emoji='🚀'; confidence=95; reasons.push(name); }
+    else if (s >= 5) { action='BET';   sizing='2/3 pot'; vClass='bet';   emoji='🟢'; confidence=85; reasons.push(name); }
+    else if (s >= 3) { action='BET';   sizing='1/2 pot'; vClass='bet';   emoji='🟢'; confidence=70; reasons.push(name); }
+    else if (s >= 2) { action='BET';   sizing='1/3 pot'; vClass='bet';   emoji='🟡'; confidence=55; reasons.push(name); }
+    else if (s >= 1.5) { action='CALL'; sizing='call';   vClass='call';  emoji='🟡'; confidence=45; reasons.push(`${name} — draw, see turn cheap`); }
+    else             { action='CHECK'; vClass='check'; emoji='🟡'; confidence=30; reasons.push(`missed flop — check`); }
+  } else if (stage === 'turn') {
+    if      (s >= 6) { action='RAISE'; sizing='pot';     vClass='raise'; emoji='🚀'; confidence=95; reasons.push(name); }
+    else if (s >= 4) { action='BET';   sizing='3/4 pot'; vClass='bet';   emoji='🟢'; confidence=85; reasons.push(name); }
+    else if (s >= 2) { action='BET';   sizing='1/2 pot'; vClass='bet';   emoji='🟡'; confidence=60; reasons.push(name); }
+    else if (s >= 1.5) { action='CALL'; sizing='call';   vClass='call';  emoji='🟡'; confidence=40; reasons.push(`${name} — price the draw`); }
+    else             { action='CHECK'; vClass='check'; emoji='🟡'; confidence=25; reasons.push(`no made hand`); }
+  } else { // river
+    if      (s >= 7) { action='RAISE'; sizing='pot';     vClass='raise'; emoji='🚀'; confidence=98; reasons.push(name); }
+    else if (s >= 5) { action='BET';   sizing='3/4 pot'; vClass='bet';   emoji='🟢'; confidence=88; reasons.push(name); }
+    else if (s >= 3) { action='BET';   sizing='1/3 pot'; vClass='bet';   emoji='🟡'; confidence=65; reasons.push(name); }
+    else if (s >= 2) { action='CHECK'; vClass='check'; emoji='🟡'; confidence=40; reasons.push(`${name} — pot control`); }
+    else             { action='FOLD';  vClass='fold';  emoji='🔴'; confidence=15; reasons.push(`no made hand`); }
+  }
+  // Facing a bet — upgrade FOLDs to CALL/FOLD decision based on pot odds when possible
+  if (d.bet_facing && d.call_amount && d.pot_size) {
+    const equity = d.call_amount / (d.pot_size + d.call_amount);
+    if (action === 'FOLD' && s >= 2 && equity < 0.33) { action='CALL'; sizing='call'; vClass='call'; emoji='🟡'; reasons.push(`Pot odds favor call (${Math.round(equity*100)}%)`); }
+  }
+  return { action, sizing, vClass, emoji, stage, reasons, handName: name, handStrength: strength, confidence };
+}
+
 function renderDecision(d) {
-  const dec = d.decision;
+  const dec = computeDecision(d) || d.decision || {};
   const box = document.getElementById('action-display');
   const emoji = document.getElementById('action-emoji');
   const text = document.getElementById('action-text');
@@ -1305,13 +1388,11 @@ function renderDecision(d) {
     }).join('');
   } else { rl.innerHTML = '<div class="empty-state" style="padding:8px">—</div>'; }
 
-<<<<<<< Updated upstream
-  // Use board_stage from raw data as authoritative — dec.stage may be stale
-  const stage = d.board_stage || dec.stage || 'preflop';
-=======
-  const bc = (d.board_cards || []).length;
-  const stage = bc >= 5 ? 'river' : bc === 4 ? 'turn' : bc === 3 ? 'flop' : 'preflop';
->>>>>>> Stashed changes
+  // Stage: prefer extension-sent board_stage (derived from .card-container total count,
+  // animation-safe). Fall back to board_total, then to board_cards.length. Never trust
+  // dec.stage alone — it goes stale across hands.
+  const bt = typeof d.board_total === 'number' ? d.board_total : (d.board_cards || []).length;
+  const stage = d.board_stage || (bt >= 5 ? 'river' : bt === 4 ? 'turn' : bt === 3 ? 'flop' : 'preflop');
   ['preflop','flop','turn','river'].forEach(s => {
     const el = document.getElementById('sp-' + s);
     if (el) el.className = 'stage-pill' + (s === stage ? ' active' : '');

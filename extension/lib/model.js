@@ -199,15 +199,15 @@ const PokerModel = (() => {
     return { made, draws, best, bestDraw, isPocketPair };
   }
 
-  function getAdvice(model, holeCards, boardCards) {
+  function getAdvice(model, holeCards, boardCards, forcedStage) {
     const allVisible = [...holeCards, ...boardCards];
     const ranked = scoreCards(model, boardCards, holeCards, allVisible);
     const top10  = ranked.slice(0,10).map(x=>x.card);
 
-    const stage = boardCards.length>=5 ? 'river'
+    const stage = forcedStage || (boardCards.length>=5 ? 'river'
       : boardCards.length===4 ? 'turn'
-      : boardCards.length>=2  ? 'flop'
-      : 'preflop';
+      : boardCards.length===3 ? 'flop'
+      : 'preflop');
 
     const { made, draws, best, bestDraw, isPocketPair } = evaluateHand(holeCards, boardCards);
     const hRanks = holeCards.map(c=>c.slice(0,-1));
@@ -301,7 +301,7 @@ const PokerModel = (() => {
         action='BET'; sizing='3/4 pot'; vClass='bet'; emoji='🟢';
         reasons.push(`${best.name} — large bet to deny equity, river is last card`);
         if (hotBoard.length) reasons.push(`${hotBoard.join(' ')} is a carry hotspot — opponent may be chasing bleed cards`);
-      } else if (s >= 2.5) {
+      } else if (s >= 2) {
         if (connecting.length>=2) {
           action='BET'; sizing='1/2 pot'; vClass='bet'; emoji='🟡';
           reasons.push(`${best.name} — ${connecting.length} river predictions improve your hand (★ below)`);

@@ -44,9 +44,25 @@ const SERVER = 'https://poker-agent-production.up.railway.app';
   }
 
   function readFromDOM() {
+    // Stage from total card-container count — reliable the moment street is dealt,
+    // unlike .flipped which lags 350ms–3s during flip animation.
+    const boardTotal = document.querySelectorAll('.table-cards .card-container').length;
+    const boardStage = boardTotal >= 5 ? 'river'
+                    : boardTotal === 4 ? 'turn'
+                    : boardTotal === 3 ? 'flop'
+                    : 'preflop';
     const holeCards  = readCards('.you-player .card-container.flipped').slice(0, 2);
     const boardCards = readCards('.table-cards .card-container.flipped').slice(0, 5);
-    return { holeCards, boardCards: boardCards.filter(c => !holeCards.includes(c)) };
+    const isHeroTurn = !!document.querySelector('.you-player.decision-current');
+    const handNum    = parseInt(document.querySelector('.open-review')?.innerText?.match(/#(\d+)/)?.[1] || '0', 10);
+    return {
+      holeCards,
+      boardCards: boardCards.filter(c => !holeCards.includes(c)),
+      boardStage,
+      boardTotal,
+      isHeroTurn,
+      handNum,
+    };
   }
 
   // ── Server communication ──────────────────────────────────────────────────
@@ -313,7 +329,7 @@ const SERVER = 'https://poker-agent-production.up.railway.app';
   let lastBoardStr = '', lastAdviceFetch = 0;
 
   async function refresh() {
-    const { holeCards, boardCards } = readFromDOM();
+    const { holeCards, boardCards, boardStage, boardTotal, isHeroTurn, handNum: domHandNum } = readFromDOM();
     updateHandBuffer(holeCards, boardCards);
 
     const main = overlay.querySelector('#pna-main');
@@ -341,7 +357,7 @@ const SERVER = 'https://poker-agent-production.up.railway.app';
 
     // Local instant advice
     if (model) {
-      const adv = PokerModel.getAdvice(model, holeCards, boardCards);
+      const adv = PokerModel.getAdvice(model, holeCards, boardCards, boardStage);
       overlay.querySelector('#pna-action').className = 'pna-action pna-action-' + adv.vClass;
       overlay.querySelector('#pna-action').textContent = adv.emoji + ' ' + adv.action;
       const sEl = overlay.querySelector('#pna-sizing');
