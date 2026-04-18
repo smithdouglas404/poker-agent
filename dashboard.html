@@ -820,10 +820,10 @@ function connectWS() {
     } catch(e) {}
   };
   ws.onclose = () => { setStatus('ws-status','WS LOST','err'); scheduleReconnect(); };
-  ws.onerror = () => { setStatus('ws-status','WS ERR','err'); };
+  ws.onerror = () => { setStatus('ws-status','WS ERR','err'); scheduleReconnect(); };
 }
 function scheduleReconnect() {
-  const delay = Math.min(1000 * Math.pow(2, wsRetry), 10000);
+  const delay = Math.min(1000 * Math.pow(2, wsRetry), 2000);
   wsRetry++;
   setTimeout(connectWS, delay);
 }
@@ -1878,6 +1878,20 @@ renderAll = function() {
 
 // ── BOOT ───────────────────────────────────────────────────────────────────────
 initSession();
+
+// Reconnect WS when tab becomes visible again (user switches back)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING)) {
+    wsRetry = 0;
+    connectWS();
+  }
+});
+window.addEventListener('focus', () => {
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    wsRetry = 0;
+    connectWS();
+  }
+});
 renderKnowledge();
 
 // ── RESTORE OPENROUTER KEY ────────────────────────────────────────────────────
