@@ -2166,6 +2166,8 @@ renderDecision = function(d) {
   if (state.raw) renderNextHandIntel(state.raw);
   // Wire position display (respects toggle-position setting)
   const showPosition = !document.getElementById('toggle-position') || document.getElementById('toggle-position').classList.contains('on');
+  // Backfill position from payload-level hero_position (new content.js sends this)
+  if (dec && (!dec.position || dec.position === 'unknown') && typeof d !== 'undefined' && d.hero_position && d.hero_position !== 'unknown') dec.position = d.hero_position;
   const posEl = document.getElementById('position');
   if (posEl && dec.position && dec.position !== 'unknown' && showPosition) {
     posEl.textContent = dec.position;
