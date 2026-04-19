@@ -1808,6 +1808,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
 # ── POST /raw — extension sends all DOM data + computed decision ───────────────
 class RawData(BaseModel):
+    class Config:
+        extra = "allow"  # pass hero_position, hand_num, any future fields
     session_id:   str
     game_id:      str  = ""   # game ID from URL — primary key for WS routing
     hole_cards:   list  = []
