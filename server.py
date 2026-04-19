@@ -1062,6 +1062,8 @@ def build_model_from_db(game_id: str) -> dict:
         "topCards":         top_cards,
         "carryRate":        carry_rate,
         "totalHands":       total,
+        "bigBlind":         2,
+        "dangerPlayers":    [],
         "confidence":       confidence,
         "deckAssessed":     deck_assessed,
         "chiDeviation":     chi_deviation,
