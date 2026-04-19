@@ -1258,11 +1258,16 @@ function computeDecision(d) {
   let action, sizing = null, vClass, emoji, confidence;
 
   if (stage === 'preflop') {
-    if (isPP && hVals[0] >= 10)   { action='RAISE'; sizing='3x';   vClass='raise'; emoji='🚀'; confidence=85; reasons.push(`Pocket ${hRanks[0]}s — premium`); }
-    else if (isPP)                { action='CALL';  sizing='call'; vClass='call';  emoji='🟡'; confidence=55; reasons.push(`Small pocket pair — set-mine`); }
-    else if (highs === 2)         { action='RAISE'; sizing='2.5x'; vClass='raise'; emoji='🟢'; confidence=70; reasons.push(`${hole.join(' ')} — two broadway cards`); }
-    else if (highs === 1)         { action='CALL';  sizing='call'; vClass='call';  emoji='🟡'; confidence=40; reasons.push(`One high card — speculative`); }
-    else                          { action='FOLD';  vClass='fold'; emoji='🔴'; confidence=20; reasons.push(`Weak holding — fold`); }
+    const maxOpBet = Number(d.max_opponent_bet || d.their_bet || 0) || 0;
+    const bigBlind = Number(d.big_blind || d.bb || 2) || 2;
+    const opRatio = maxOpBet / Math.max(bigBlind, 1);
+    const facingRaise = opRatio >= 3;
+    const facingBigRaise = opRatio >= 6;
+    if (isPP && hVals[0] >= 10)      { action='RAISE'; sizing='3x';   vClass='raise'; emoji='�'; confidence=85; reasons.push(`Premium pair`); }
+    else if (isPP)                   { action = facingBigRaise ? 'FOLD' : 'CALL'; sizing='call'; vClass=action==='FOLD'?'fold':'call'; emoji='🏻'; confidence=60; reasons.push(facingBigRaise ? `Small pair vs big raise - fold` : `Small pair - set mine`); }
+    else if (highs === 2)            { action = facingBigRaise ? 'CALL' : 'RAISE'; sizing = facingBigRaise ? 'call' : '2.5x'; vClass = action==='CALL'?'call':'raise'; emoji='�'; confidence=75; reasons.push(`Two high cards`); }
+    else if (highs === 1)            { action = facingRaise ? 'FOLD' : 'CALL';  sizing = facingRaise ? null : 'call'; vClass = action==='FOLD'?'fold':'call'; emoji='🏻'; confidence=40; reasons.push(facingRaise ? `One high card vs raise - fold` : `One high card - speculative`); }
+    else                             { action='FOLD';  vClass='fold'; emoji='�'; confidence=20; reasons.push(`No pair, no high cards`); }
   } else if (stage === 'flop') {
     if      (s >= 7) { action='RAISE'; sizing='pot';     vClass='raise'; emoji='🚀'; confidence=95; reasons.push(name); }
     else if (s >= 5) { action='BET';   sizing='2/3 pot'; vClass='bet';   emoji='🟢'; confidence=85; reasons.push(name); }
@@ -1350,7 +1355,7 @@ function renderDecision(d) {
   if (hsEl) {
     const hn = dec.handName || '';
     const hs = dec.handStrength || 0;
-    hsEl.textContent = hn ? hn.toUpperCase() : (d.hole_cards && d.hole_cards.length ? 'HIGH CARD' : '');
+    hsEl.textContent = hn ? hn.toUpperCase() : (d.hole_cards && d.hole_cards.length ? (evalHand(d.hole_cards, d.board_cards || []).name || '—').toUpperCase() : '—');
     hsEl.className = hs >= 5 ? 'strong' : hs >= 2 ? 'made' : hs >= 1 ? 'draw' : 'nothing';
   }
 
