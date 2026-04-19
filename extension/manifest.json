@@ -1,14 +1,19 @@
 {
   "manifest_version": 3,
   "name": "PokerNow Advisor",
-  "version": "1.1",
+  "version": "33.0",
   "description": "Real-time poker advice based on shuffle bias analysis",
-  "permissions": ["storage", "scripting", "activeTab"],
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "webNavigation"
+  ],
   "host_permissions": [
-    "https://www.pokernow.club/*",
-    "https://pokernow.club/*",
     "https://www.pokernow.com/*",
-    "https://pokernow.com/*"
+    "https://pokernow.com/*",
+    "https://www.pokernow.club/*",
+    "https://pokernow.club/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -20,25 +25,29 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.pokernow.club/*",
-        "https://pokernow.club/*",
         "https://www.pokernow.com/*",
-        "https://pokernow.com/*"
+        "https://pokernow.com/*",
+        "https://www.pokernow.club/*",
+        "https://pokernow.club/*"
       ],
-      "js": ["lib/model.js", "content.js"],
-      "css": ["overlay.css"],
+      "js": [
+        "lib/model.js",
+        "content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": false
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["overlay.css", "lib/model.js"],
+      "resources": [
+        "lib/model.js"
+      ],
       "matches": [
-        "https://www.pokernow.club/*",
-        "https://pokernow.club/*",
         "https://www.pokernow.com/*",
-        "https://pokernow.com/*"
+        "https://pokernow.com/*",
+        "https://www.pokernow.club/*",
+        "https://pokernow.club/*"
       ]
     }
   ],
