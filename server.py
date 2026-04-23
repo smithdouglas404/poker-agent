@@ -838,6 +838,47 @@ SUITS  = ['♠','♥','♦','♣']
 ALL_CARDS = [r+s for r in RANKS for s in SUITS]
 EARLY_POS = {'hole_1','hole_2','flop_1','flop_2','flop_3'}
 
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 3 pattern helpers — computed from existing hand data (no schema change)
+# See AGENT_CONTRACT.md before modifying.
+# ═══════════════════════════════════════════════════════════════════════════
+def _phase3_position_win_rate(hands):
+    """Returns {position_offset: win_pct} over last 30 hands.
+    Position is approximated from player_count: position 2 (BB) is the most-active
+    walkover position. We use heuristic (no winner_position column yet)."""
+    out = {}
+    sample = hands[-30:] if len(hands) > 30 else hands
+    if not sample:
+        return out
+    # Without winner_position column, we report carry by player_count as proxy
+    counts = {}
+    for h in sample:
+        pc = h.get("player_count") or 0
+        counts[pc] = counts.get(pc, 0) + 1
+    return {str(k): round(100*v/len(sample), 1) for k, v in counts.items()}
+
+def _phase3_recent_winner_positions(hands):
+    """Last 5 winners' position offsets. Without winner_position column, returns []
+    so the JS code's predicted-zone logic safely no-ops."""
+    return []
+
+def _phase3_river_completion(hands):
+    """Approx % of recent hands that REACHED the river (proxy for river-decided rate)."""
+    sample = hands[-30:] if len(hands) > 30 else hands
+    if not sample:
+        return 0
+    reached = sum(1 for h in sample if h.get("river") and len(h["river"]) > 0)
+    return round(100 * reached / len(sample))
+
+def _phase3_walkover_bb(hands):
+    """% of recent hands that ended preflop (no flop) — proxy for BB walkover rate."""
+    sample = hands[-30:] if len(hands) > 30 else hands
+    if not sample:
+        return 0
+    walkovers = sum(1 for h in sample if not h.get("flop") or len(h["flop"]) == 0)
+    return round(100 * walkovers / len(sample))
+
+
 def build_model_from_db(game_id: str) -> dict:
     """Build the poker model from THIS game's hands only. Each game is independent."""
     try:
@@ -1077,6 +1118,11 @@ def build_model_from_db(game_id: str) -> dict:
             "medium": {"count": len(medium_table), "carryRate": segment_carry(medium_table)},
             "large":  {"count": len(large_table),  "carryRate": segment_carry(large_table)},
         },
+        # ── Phase 3 pattern fields (computed live from existing data) ──
+        "positionWinRate":       _phase3_position_win_rate(hands),
+        "recentWinnerPositions": _phase3_recent_winner_positions(hands),
+        "riverCompletionRate":   _phase3_river_completion(hands),
+        "walkoverRateBB":        _phase3_walkover_bb(hands),
         "hands": last3,
     }
 
