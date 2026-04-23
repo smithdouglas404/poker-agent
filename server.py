@@ -24,6 +24,18 @@ except ImportError:
     LANGGRAPH_AVAILABLE = False
     print("[startup] langgraph not available — falling back to direct Claude")
 
+# ── 6-agent council with live weight learning (v36.2) ─────────────────────
+try:
+    import agents as agent_council
+    AGENT_COUNCIL_AVAILABLE = True
+    print("[startup] agent council loaded (6 agents + Trend Watcher)")
+except Exception as e:
+    AGENT_COUNCIL_AVAILABLE = False
+    print(f"[startup] agent council unavailable: {e}")
+
+# Cache last council signals per game so /hand can pass them to the Trend Watcher
+_latest_council_signals: Dict[str, Dict] = {}
+
 # ── Letta Cloud — optional, falls back to direct Claude if not available ───────
 try:
     from letta_client import Letta as LettaClient
@@ -1444,6 +1456,24 @@ async def log_hand(data: HandData):
     except Exception as e:
         print(f"[model] rebuild error: {e}")
 
+
+    # ── Trend Watcher: record outcome and update weights ──
+    if AGENT_COUNCIL_AVAILABLE:
+        try:
+            _gid = data.game_id or data.session_id
+            signals = _latest_council_signals.get(_gid) or {}
+            learn_result = agent_council.on_hand_complete(
+                game_id=_gid, hand_num=data.hand_num,
+                hero_won=data.hero_won, last_council_signals=signals,
+            )
+            if learn_result.get("recorded"):
+                wu = learn_result.get("weight_update", {})
+                if wu.get("updated"):
+                    print(f"[trend] hand {data.hand_num} hero_won={data.hero_won} "
+                          f"new_weights={wu.get('new_weights')} loss={wu.get('avg_loss')}")
+        except Exception as e:
+            print(f"[hand] trend watcher error: {e}")
+
     return {
         "ok": True,
         "mem0_id": mem0_id,
@@ -1613,6 +1643,16 @@ async def proof(session_id: str):
         return {"ok": False, "error": str(e)}
 
 # ── GET /health ───────────────────────────────────────────────────────────────
+
+@app.get("/agent_council/{game_id}")
+async def get_agent_council(game_id: str):
+    """Return latest council state for the dashboard widget."""
+    state = _latest_state.get(game_id, {})
+    return {
+        "ok": True,
+        "council": state.get("agent_council") or {},
+        "ts": datetime.utcnow().isoformat(),
+    }
 
 @app.get("/health")
 async def health():
@@ -1961,6 +2001,37 @@ async def post_raw(data: RawData):
         payload["server_status"] = {"hands_logged": 0, "mem0_live": False, "claude_live": False}
 
     _latest_state[route_key] = payload
+
+    # ── Run 6-agent council on every /raw POST (~30-100ms pure Python) ──
+    if AGENT_COUNCIL_AVAILABLE:
+        try:
+            with get_db() as db:
+                hist_rows = db.execute(
+                    "SELECT hand_num, hole_cards, flop, turn, river, winner_position "
+                    "FROM hands WHERE game_id=? ORDER BY hand_num DESC LIMIT 30",
+                    (route_key,)
+                ).fetchall()
+                hand_history = []
+                for r in reversed(hist_rows):
+                    h = dict(r)
+                    for k in ("hole_cards", "flop"):
+                        try:
+                            h[k] = json.loads(h[k]) if h[k] else []
+                        except Exception:
+                            h[k] = []
+                    hand_history.append(h)
+            council_result = await agent_council.run_council(
+                game_id=route_key, session_id=data.session_id,
+                hand_num=(hand_history[-1].get("hand_num", 0) if hand_history else 0) + 1,
+                raw_payload=payload, hand_history=hand_history,
+            )
+            payload["agent_council"] = council_result
+            _latest_council_signals[route_key] = council_result.get("agent_outputs", {}) or {}
+            _latest_council_signals[route_key]["decision"] = council_result.get("decision")
+        except Exception as e:
+            print(f"[raw] council error: {e}")
+            payload["agent_council"] = {"ok": False, "error": str(e)}
+
     await manager.broadcast(route_key, {"type": "raw", "data": payload})
     return {"ok": True}
 
