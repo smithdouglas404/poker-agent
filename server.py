@@ -1285,6 +1285,20 @@ async def log_hand(data: HandData):
                             _winner_pos = (_w_idx - _d_idx) % len(_seats) if _seats else None
             except Exception:
                 pass
+            # Phase 3 v36 fallback — non-showdown wins (preflop folds, opponents fold to bet).
+            # If existing showdown-based detection didn't find a winner, derive from last-standing player.
+            if _winner_pos is None and data.player_stats and data.dealer_pos:
+                try:
+                    _active = [n for n, p in data.player_stats.items() if p and not p.get('folded')]
+                    if len(_active) == 1:
+                        _w_seat = data.player_stats[_active[0]].get('seatPos')
+                        _seats = sorted([(p.get('seatPos') or 0) for p in data.player_stats.values() if p])
+                        if _w_seat is not None and _w_seat in _seats:
+                            _d_idx = _seats.index(data.dealer_pos) if data.dealer_pos in _seats else 0
+                            _w_idx = _seats.index(_w_seat)
+                            _winner_pos = (_w_idx - _d_idx) % len(_seats) if _seats else None
+                except Exception:
+                    pass
             db.execute(
                 "INSERT OR IGNORE INTO hands (game_id,session_id,hand_num,hole_cards,board,hero_won,hero_folded,all_in,pot,away_mode,shown_hands,player_stats,player_count,engine_action,engine_confidence,engine_hand_strength,winner_position,hero_position,bb_position) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (game_id, data.session_id, data.hand_num,
