@@ -649,6 +649,9 @@ opacity:0.3}}
 </head>
 <body>
 <script>
+// v36 stub: prevents "loadActionWinRates is not defined" before real function is hoisted
+if (typeof window.loadActionWinRates === "undefined") { window.loadActionWinRates = function(){}; }
+
 // Strip injected CSS text from Trupeer/other extensions
 (function(){
   function scrubCSSText(node){
