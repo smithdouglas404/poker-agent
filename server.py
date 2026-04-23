@@ -807,6 +807,10 @@ def init_db():
         ("hands", "engine_action",         "TEXT DEFAULT ''"),
         ("hands", "engine_confidence",     "INTEGER DEFAULT 0"),
         ("hands", "engine_hand_strength",  "REAL DEFAULT 0"),
+        # Phase 3 (v36) — winner-tracking columns for position pattern analysis
+        ("hands", "winner_position",  "INTEGER"),
+        ("hands", "hero_position",    "INTEGER"),
+        ("hands", "bb_position",      "INTEGER DEFAULT 2"),
     ]
     with get_db() as db:
         for table, col, typedef in migrations:
@@ -884,7 +888,7 @@ def build_model_from_db(game_id: str) -> dict:
     try:
         with get_db() as db:
             rows = db.execute(
-                "SELECT hole_cards, board, player_count FROM hands "
+                "SELECT hole_cards, board, player_count, winner_position, hero_position, bb_position FROM hands "
                 "WHERE game_id=? AND hole_cards IS NOT NULL ORDER BY id ASC",
                 (game_id,)
             ).fetchall()
@@ -901,11 +905,26 @@ def build_model_from_db(game_id: str) -> dict:
         bd = json.loads(row["board"] or "[]")
         pc = row["player_count"] or 0
         if hc:
+            try:
+                _wp = row["winner_position"]
+            except (IndexError, KeyError):
+                _wp = None
+            try:
+                _hp = row["hero_position"]
+            except (IndexError, KeyError):
+                _hp = None
+            try:
+                _bbp = row["bb_position"] if row["bb_position"] is not None else 2
+            except (IndexError, KeyError):
+                _bbp = 2
             hands.append({
                 "hole_cards":   hc,
                 "flop":         bd[:3] if len(bd) >= 3 else [],
                 "turn":         [bd[3]] if len(bd) >= 4 else [],
                 "river":        [bd[4]] if len(bd) >= 5 else [],
+                "winner_position": _wp,
+                "hero_position":   _hp,
+                "bb_position":     _bbp,
                 "player_count": pc,
             })
 
@@ -1250,14 +1269,31 @@ async def log_hand(data: HandData):
             engine_action = data.decision.get('action','') if data.decision else ''
             engine_confidence = data.decision.get('confidence', 0) if data.decision else 0
             engine_hand_strength = data.decision.get('handStrength', 0) if data.decision else 0
+            # Phase 3 (v36) — compute winner_position from dealer_pos and shown_winners
+            _winner_pos = None
+            _hero_pos_val = getattr(data, 'hero_position', None)
+            _bb_pos_val = 2
+            try:
+                if data.shown_winners and data.player_stats:
+                    _w = data.shown_winners[0] if isinstance(data.shown_winners, list) else None
+                    if _w and _w in data.player_stats:
+                        _w_seat = data.player_stats[_w].get('seatPos')
+                        _seats = sorted([(p.get('seatPos') or 0) for p in data.player_stats.values() if p])
+                        if _w_seat is not None and data.dealer_pos:
+                            _d_idx = _seats.index(data.dealer_pos) if data.dealer_pos in _seats else 0
+                            _w_idx = _seats.index(_w_seat) if _w_seat in _seats else 0
+                            _winner_pos = (_w_idx - _d_idx) % len(_seats) if _seats else None
+            except Exception:
+                pass
             db.execute(
-                "INSERT OR IGNORE INTO hands (game_id,session_id,hand_num,hole_cards,board,hero_won,hero_folded,all_in,pot,away_mode,shown_hands,player_stats,player_count,engine_action,engine_confidence,engine_hand_strength) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO hands (game_id,session_id,hand_num,hole_cards,board,hero_won,hero_folded,all_in,pot,away_mode,shown_hands,player_stats,player_count,engine_action,engine_confidence,engine_hand_strength,winner_position,hero_position,bb_position) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (game_id, data.session_id, data.hand_num,
                  json.dumps(data.hole_cards), json.dumps(board),
                  int(data.hero_won), int(data.hero_folded), int(data.all_in),
                  data.pot, int(data.away_mode), json.dumps(data.shown_hands),
                  json.dumps(data.players_in_hand), player_count,
-                 engine_action, engine_confidence, engine_hand_strength)
+                 engine_action, engine_confidence, engine_hand_strength,
+                 _winner_pos, _hero_pos_val, _bb_pos_val)
             )
             hand_was_new = db.execute("SELECT changes()").fetchone()[0] > 0
             if not hand_was_new:
