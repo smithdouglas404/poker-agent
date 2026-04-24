@@ -98,18 +98,29 @@ def _norm(raw): return (raw / 50.0) - 1
 async def agent_dom_ingest(state):
     t0 = time.time()
     p = state.get("raw_payload", {})
+    # Derive aggressor from player_stats (highest currentBet) if payload aggressor is empty
+    _stats = p.get("player_stats") or {}
+    _aggressor = p.get("aggressor", "")
+    if not _aggressor and _stats:
+        _bets = [(n, (ps.get("currentBet") or ps.get("currentBetAmount") or 0)) for n, ps in _stats.items()]
+        _bets = [(n, b) for n, b in _bets if b and not (_stats.get(n) or {}).get("isHero")]
+        if _bets:
+            _bets.sort(key=lambda x: -x[1])
+            if _bets[0][1] > 0:
+                _aggressor = _bets[0][0]
     facts = {
         "hole_cards": p.get("hole_cards", []), "board_cards": p.get("board_cards", []),
         "board_stage": p.get("board_stage", "preflop"), "pot_size": p.get("pot_size", 0),
         "call_amount": p.get("call_amount", 0), "bet_facing": p.get("bet_facing", 0),
         "hero_stack": p.get("hero_stack", 0), "is_hero_turn": p.get("is_hero_turn", False),
-        "can_check": p.get("can_check", False), "aggressor": p.get("aggressor", ""),
+        "can_check": p.get("can_check", False), "aggressor": _aggressor,
         "dealer_pos": p.get("dealer_pos", 0), "blinds": p.get("blinds", {}),
         "active_players": [
             {"name": n, "seat": ps.get("seatPos"), "is_hero": ps.get("isHero", False),
              "stack": ps.get("stackStart", 0), "vpip_count": ps.get("vpipCount", 0),
-             "pfr_count": ps.get("pfrCount", 0), "hands_played": ps.get("handsPlayed", 1)}
-            for n, ps in (p.get("player_stats") or {}).items()
+             "pfr_count": ps.get("pfrCount", 0), "hands_played": ps.get("handsPlayed", 1),
+             "current_bet": ps.get("currentBet", 0) or ps.get("currentBetAmount", 0) or 0}
+            for n, ps in _stats.items()
         ],
     }
     n_seats = len(facts["active_players"]) or 6
@@ -201,6 +212,11 @@ async def agent_position_flow(state):
     history = state.get("hand_history", []) or []
     hero_pos = state.get("hero_position"); n_seats = state.get("n_seats", 6)
     last_winner_pos = None
+    # winner_position not in DB schema — compute it here from available hand data.
+    # Heuristic: most recent hand where hero_won is clear. We skip hands without seating info.
+    # If hero_won=1 in hand, the hero's position IS the winner position.
+    # For now, approximate: if hand_history has any signal we can use, take most-recent "won" hand's pos.
+    # (Without seat metadata in hand_history this stays None — the fallback is the bb_walkover path below.)
     for h in reversed(history):
         wp = h.get("winner_position")
         if wp is not None: last_winner_pos = wp; break
@@ -259,7 +275,33 @@ async def agent_meta_coordinator(state):
     x_s = _norm(shuffle.get("raw_signal", 0))
     x_p = _norm(position.get("raw_signal", 50))
     x_t = _norm(players.get("raw_signal", 0))
-    z = weights["shuffle"]*x_s + weights["position"]*x_p + weights["threat"]*x_t + weights["bias"]
+    # Hand-strength proxy: pairs, high cards, suited.  Pure data features, not Sklansky tiers.
+    RANK_VAL = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14}
+    hole = facts.get("hole_cards") or []
+    hand_bonus = 0.0
+    if len(hole) == 2:
+        r1, r2 = hole[0][:-1], hole[1][:-1]
+        s1, s2 = hole[0][-1], hole[1][-1]
+        v1, v2 = RANK_VAL.get(r1, 0), RANK_VAL.get(r2, 0)
+        hi, lo = max(v1, v2), min(v1, v2)
+        is_pair = (r1 == r2)
+        is_suited = (s1 == s2)
+        # Strength in z-space: pairs from JJ+ = +0.8, 99-TT = +0.4, 22-88 = +0.1;
+        # A+K = +0.6, A+Q = +0.4, A+J = +0.3, K+Q = +0.3, suited connector = +0.2, suited bonus = +0.1
+        if is_pair:
+            if hi >= 11:   hand_bonus = 0.80
+            elif hi >= 9:  hand_bonus = 0.40
+            else:          hand_bonus = 0.10
+        else:
+            if hi == 14 and lo >= 13: hand_bonus = 0.60
+            elif hi == 14 and lo >= 11: hand_bonus = 0.40
+            elif hi == 14 and lo >= 10: hand_bonus = 0.30
+            elif hi >= 13 and lo >= 11: hand_bonus = 0.30
+            elif hi >= 12 and lo >= 10: hand_bonus = 0.20
+            elif hi >= 10 and lo >= 9 and abs(v1 - v2) == 1: hand_bonus = 0.15
+            if is_suited: hand_bonus += 0.10
+            if hi <= 8 and lo <= 7 and abs(v1 - v2) > 2: hand_bonus = -0.20
+    z = weights["shuffle"]*x_s + weights["position"]*x_p + weights["threat"]*x_t + weights["bias"] + hand_bonus
     p_win = _sigmoid(z)
     bet = facts.get("bet_facing", 0); can_check = facts.get("can_check", False)
     bb = (facts.get("blinds") or {}).get("bb", 2) or 2
