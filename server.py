@@ -2007,18 +2007,30 @@ async def post_raw(data: RawData):
         try:
             with get_db() as db:
                 hist_rows = db.execute(
-                    "SELECT hand_num, hole_cards, flop, turn, river, winner_position "
+                    "SELECT hand_num, hole_cards, board, hero_won "
                     "FROM hands WHERE game_id=? ORDER BY hand_num DESC LIMIT 30",
                     (route_key,)
                 ).fetchall()
                 hand_history = []
                 for r in reversed(hist_rows):
                     h = dict(r)
-                    for k in ("hole_cards", "flop"):
+                    # hole_cards stored as JSON array
+                    try:
+                        h["hole_cards"] = json.loads(h["hole_cards"]) if h["hole_cards"] else []
+                    except Exception:
+                        h["hole_cards"] = []
+                    # board stored as space-separated string like "As 8c 5c Qh 2d" — split into flop/turn/river
+                    board_cards = []
+                    if h.get("board"):
                         try:
-                            h[k] = json.loads(h[k]) if h[k] else []
+                            parsed = json.loads(h["board"]) if h["board"].startswith("[") else h["board"].split()
+                            board_cards = parsed if isinstance(parsed, list) else h["board"].split()
                         except Exception:
-                            h[k] = []
+                            board_cards = h["board"].split() if h["board"] else []
+                    h["flop"]  = board_cards[:3] if len(board_cards) >= 3 else []
+                    h["turn"]  = board_cards[3] if len(board_cards) >= 4 else None
+                    h["river"] = board_cards[4] if len(board_cards) >= 5 else None
+                    h["winner_position"] = None  # not stored in current schema
                     hand_history.append(h)
             council_result = await agent_council.run_council(
                 game_id=route_key, session_id=data.session_id,
